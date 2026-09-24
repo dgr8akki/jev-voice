@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jev Voice: allow the microphone</title>
+    <link rel="stylesheet" href="../sidepanel/sidepanel.css" />
+    <style>
+      body {
+        max-width: 420px;
+        margin: 15vh auto;
+        padding: 24px;
+      }
+      .card {
+        display: grid;
+        gap: 12px;
+      }
+    </style>
+    <script type="module" src="permission.js"></script>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Allow the microphone</h1>
+      <p class="hint">
+        Side panels can't ask for microphone access, so Jev Voice asks here once. Audio is transcribed by your browser
+        and never recorded.
+      </p>
+      <button id="allow" type="button" class="primary">Allow microphone</button>
+      <p id="status" role="status"></p>
+    </main>
+  </body>
+</html>

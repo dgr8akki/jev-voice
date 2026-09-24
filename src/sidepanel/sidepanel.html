@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jev Voice</title>
+    <link rel="stylesheet" href="sidepanel.css" />
+    <script type="module" src="sidepanel.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+        <h1>Jev Voice</h1>
+      </div>
+      <button
+        id="settings-toggle"
+        class="icon-button"
+        type="button"
+        aria-expanded="false"
+        aria-controls="settings"
+        aria-label="Settings"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+          <circle cx="16" cy="7" r="2" />
+          <circle cx="10" cy="17" r="2" />
+        </svg>
+      </button>
+    </header>
+
+    <section id="settings" class="panel settings" hidden>
+      <form id="key-form" class="field">
+        <label for="api-key">AI Gateway API key</label>
+        <div class="row">
+          <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="vck_…" />
+          <button type="submit">Save</button>
+        </div>
+        <p id="key-status" class="hint" role="status">
+          Stored only in this browser. Sent only to ai-gateway.vercel.sh.
+        </p>
+      </form>
+    </section>
+
+    <main>
+      <button id="mic" type="button" class="mic" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="9" y="3" width="6" height="11" rx="3" />
+          <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+        </svg>
+        <span id="mic-label">Start listening</span>
+      </button>
+      <p id="heard" class="heard" aria-live="polite"></p>
+
+      <form id="command-form">
+        <label for="command" class="visually-hidden">Type a command</label>
+        <input id="command" type="text" autocomplete="off" placeholder="Or type a command" />
+      </form>
+
+      <details class="examples">
+        <summary>What can I say?</summary>
+        <ul>
+          <li>“Go to wikipedia”, “open facebook dot com”</li>
+          <li>“Search for Alan Turing”</li>
+          <li>“Click the first result”, “open the pricing link”</li>
+          <li>“Type hello in the email field and press enter”</li>
+          <li>“No, that's the first name, not the surname”</li>
+          <li>“Scroll down”, “go back”, “reload”</li>
+          <li>“New tab”, “next tab”, “close this tab”</li>
+        </ul>
+      </details>
+
+      <section class="activity" aria-labelledby="activity-heading">
+        <h2 id="activity-heading">Activity</h2>
+        <ol id="activity" class="activity-list" aria-live="polite"></ol>
+        <p id="activity-empty" class="hint">Commands you give will appear here.</p>
+      </section>
+    </main>
+  </body>
+</html>
