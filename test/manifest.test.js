@@ -16,6 +16,7 @@ describe('manifest', () => {
     const files = [
       manifest.background.service_worker,
       manifest.side_panel.default_path,
+      manifest.options_ui.page,
       ...Object.values(manifest.icons),
       ...Object.values(manifest.action.default_icon),
     ];

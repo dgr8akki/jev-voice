@@ -3,7 +3,7 @@
  * log. Transcripts are handled by the service worker (background.js).
  */
 
-import { createJevClient } from '../lib/jev.js';
+import { mountConnection } from '../lib/connection.js';
 import { createTranscriptQueue } from '../lib/queue.js';
 import { createListener } from '../lib/speech.js';
 
@@ -13,36 +13,15 @@ const MAX_ACTIVITY = 30;
 // ---------------------------------------------------------------------------
 // Settings
 
-const { apiKey = '' } = await chrome.storage.local.get('apiKey');
-$('api-key').value = apiKey;
-if (!apiKey) toggleSettings(true);
+await mountConnection($('connection'), $('open-settings'), (connected) => {
+  if (!connected) toggleSettings(true);
+});
 
 $('settings-toggle').addEventListener('click', () => toggleSettings());
-$('key-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  const key = $('api-key').value.trim();
-  await chrome.storage.local.set({ apiKey: key });
-  setKeyStatus('Checking key…');
-  try {
-    const jev = createJevClient({ getKey: () => key });
-    await jev.evaluate({
-      state: 'ping',
-      questions: { ok: { type: 'boolean', instructions: 'Is this a test message?' } },
-    });
-    setKeyStatus('Key saved and working.', 'ok');
-  } catch (error) {
-    setKeyStatus(error.message, 'error');
-  }
-});
 
 function toggleSettings(open = $('settings').hidden) {
   $('settings').hidden = !open;
   $('settings-toggle').setAttribute('aria-expanded', String(open));
-}
-
-function setKeyStatus(text, tone) {
-  $('key-status').textContent = text;
-  $('key-status').className = tone ? `hint status-${tone}` : 'hint';
 }
 
 // ---------------------------------------------------------------------------

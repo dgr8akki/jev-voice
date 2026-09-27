@@ -54,7 +54,12 @@ Jev Voice isn't on the Chrome Web Store yet. To install from source:
 3. Click **Load unpacked** and select the unzipped folder (or `src/` in a clone).
 4. Pin **Jev Voice** from the puzzle-piece menu.
 
-You need an [AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys) from Vercel. Jev costs $0.042 per million input tokens (a fraction of a cent per command). Set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key you use.
+You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Vercel AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys). The settings page opens on install: pick your provider, paste the key and select **Connect**; it's checked before it's saved. Jev costs $0.042 per million input tokens (a fraction of a cent per command). With Vercel, set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
+  <img src="docs/options-light.png" width="520" alt="The Jev Voice settings page: a Connect Jev card with a choice between Vercel AI Gateway and TypeSafe, setup steps for the chosen provider, an API key field and a Connect button." />
+</picture>
 
 > [!NOTE]
 > Use Google Chrome. Brave ships no working speech recognition; you can still type commands there.
@@ -62,7 +67,7 @@ You need an [AI Gateway API key](https://vercel.com/docs/ai-gateway/authenticati
 ## Usage
 
 1. Click the Jev Voice icon to open the side panel.
-2. Paste your API key in **Settings** and select **Save**. The panel checks the key.
+2. If you haven't connected a key yet, the panel shows **Connect Jev**; select it to open settings.
 3. Select **Start listening**. The first time, Chrome asks for microphone access in a new tab.
 
 | Say                                                     | What happens                                    |
@@ -87,7 +92,7 @@ You can type any command in the box under the microphone button.
 | `storage`                 | Keeps your API key in this browser                                                 |
 | Microphone                | Hears commands; audio is transcribed by the browser and never stored               |
 
-For each command, the transcript, the active tab's URL and title, and the labels of visible links, buttons and fields are sent to Vercel AI Gateway, which forwards them to TypeSafe to run Jev. Field values and page text are not sent. See [PRIVACY.md](PRIVACY.md).
+For each command, the transcript, the active tab's URL and title, and the labels of visible links, buttons and fields are sent to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. Field values and page text are not sent. See [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
@@ -96,7 +101,7 @@ Requires Node.js 22 or later.
 ```sh
 npm install
 npm run check      # lint + format check + unit tests
-npm run eval       # live evaluation against Jev (needs AI_GATEWAY_API_KEY in .env)
+npm run eval       # live evaluation against Jev (needs TYPESAFE_API_KEY or AI_GATEWAY_API_KEY in .env)
 npm run package    # builds dist/jev-voice-<version>.zip for the Chrome Web Store
 ```
 
@@ -116,11 +121,13 @@ src/
 ├── manifest.json
 ├── background.js          Service worker: Chrome adapter and message routing
 ├── sidepanel/             Side panel UI (HTML, CSS, controller)
+├── options/               Pick a provider; connect, test, replace or remove the key
 ├── permission/            One-time microphone permission page
 └── lib/
     ├── commands.js        Vocabulary, Jev questions, rules for acting early, text candidates
     ├── handler.js         One transcript end to end: snapshot, ask Jev, act
-    ├── jev.js             Jev client: retries, rate-limit pauses, clear errors
+    ├── connection.js      "Connected via …" row; opens settings
+    ├── jev.js             Jev client for TypeSafe or Vercel: retries, rate-limit pauses, clear errors
     ├── page.js            Functions injected into the tab (snapshot, click, type, cursor)
     ├── queue.js           One request in flight; newest partial wins
     └── speech.js          Word-by-word speech recognition, on-device first
@@ -135,13 +142,13 @@ evals/                     Live evaluation against Jev
 
 ## Troubleshooting
 
-| Problem                                           | Fix                                                                                                      |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| "Couldn't find that on the page"                  | Only elements visible on screen are considered. Scroll so the element is in view, then try again.        |
-| "Speech recognition can't reach Google's servers" | You're in Brave or behind a VPN that blocks Google speech. Use Chrome, or type commands.                 |
-| "Jev is busy. Try again in 30s."                  | TypeSafe is overloaded. Wait, then repeat the command.                                                   |
-| "Your API key was rejected"                       | Check the key in Settings. New Vercel accounts need a card on file before AI Gateway serves requests.    |
-| Nothing happens on some pages                     | Chrome doesn't let extensions script `chrome://` pages or the Web Store. Navigation commands still work. |
+| Problem                                           | Fix                                                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| "Couldn't find that on the page"                  | Only elements visible on screen are considered. Scroll so the element is in view, then try again.                               |
+| "Speech recognition can't reach Google's servers" | You're in Brave or behind a VPN that blocks Google speech. Use Chrome, or type commands.                                        |
+| "Jev is busy. Try again in 30s."                  | TypeSafe is overloaded. Wait, then repeat the command.                                                                          |
+| "Your API key was rejected"                       | Select **Change** in Settings and connect a new key. New Vercel accounts need a card on file before AI Gateway serves requests. |
+| Nothing happens on some pages                     | Chrome doesn't let extensions script `chrome://` pages or the Web Store. Navigation commands still work.                        |
 
 ## Limitations
 

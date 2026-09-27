@@ -9,8 +9,14 @@ import { JevError, createJevClient } from './lib/jev.js';
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
 
+// First install: open settings in a tab to pick a provider and connect a key.
+chrome.runtime.onInstalled.addListener(({ reason }) => {
+  if (reason === 'install') chrome.runtime.openOptionsPage();
+});
+
 const jev = createJevClient({
   getKey: async () => (await chrome.storage.local.get('apiKey')).apiKey ?? '',
+  getProvider: async () => (await chrome.storage.local.get('provider')).provider,
 });
 
 /** @type {import('./lib/handler.js').Browser} */

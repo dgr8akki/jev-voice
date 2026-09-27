@@ -83,8 +83,7 @@ button.primary {
   color: var(--accent-ink);
 }
 
-input[type='text'],
-input[type='password'] {
+input[type='text'] {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--line);
@@ -178,26 +177,11 @@ svg {
   background: var(--surface);
 }
 
-.field {
+.connection {
   display: grid;
-  gap: 6px;
-}
-
-.field label {
-  font-weight: 500;
-}
-
-.row {
-  display: flex;
-  gap: 8px;
-}
-
-.status-ok {
-  color: var(--ok);
-}
-
-.status-error {
-  color: var(--danger);
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
 }
 
 /* Microphone */
