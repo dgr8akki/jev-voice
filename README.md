@@ -7,13 +7,13 @@
 **Control Chrome by voice.** Open sites, search, click links and fill in forms by saying what you want.
 
 [![CI](https://github.com/dgr8akki/jev-voice/actions/workflows/ci.yml/badge.svg)](https://github.com/dgr8akki/jev-voice/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-3b5bdb.svg)](LICENSE)
-![Manifest V3](https://img.shields.io/badge/manifest-v3-3b5bdb.svg)
-![Chrome 116+](https://img.shields.io/badge/chrome-116%2B-3b5bdb.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-5d5294.svg)](LICENSE)
+![Manifest V3](https://img.shields.io/badge/manifest-v3-5d5294.svg)
+![Chrome 116+](https://img.shields.io/badge/chrome-116%2B-5d5294.svg)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
-  <img src="docs/screenshot-light.png" width="360" alt="Jev Voice side panel while listening, with recent commands: a search, a click, going back and typing a name into a form field." />
+  <img src="docs/screenshot-light.png" width="360" alt="Jev Voice side panel while listening. The words go back are underlined because the extension went back before the sentence finished; below, recent commands: typing a name into a form field, a click and a search." />
 </picture>
 
 </div>
@@ -24,7 +24,7 @@
 - **Acts before you finish.** Commands such as "go back" or "scroll down" run as soon as they're unambiguous, often mid-sentence.
 - **Fills in forms.** Picks the right field from its label, types the right words, and submits when you say "and press enter".
 - **Takes corrections.** "No, that's the first name, not the surname" moves what it just typed.
-- **Shows what it's doing.** A cursor glides to the element and outlines it before clicking or typing.
+- **Shows what it's doing.** A cue mark glides beside the element and outlines it before clicking or typing, and the side panel underlines the words an early action fired on.
 - **Private by default.** On-device speech recognition where Chrome supports it. No accounts, no analytics.
 
 ## How it works
@@ -123,6 +123,8 @@ src/
 ├── sidepanel/             Side panel UI (HTML, CSS, controller)
 ├── options/               Pick a provider; connect, test, replace or remove the key
 ├── permission/            One-time microphone permission page
+├── ui/tokens.css          Shared design tokens (light and dark) and controls
+├── fonts/                 Bundled Inter (OFL), so no page loads fonts from the network
 └── lib/
     ├── commands.js        Vocabulary, Jev questions, rules for acting early, text candidates
     ├── handler.js         One transcript end to end: snapshot, ask Jev, act

@@ -98,6 +98,7 @@ describe('createHandler', () => {
   it('searches with the spoken query', async () => {
     const { outcome } = await run({ said: 'search for alan turing', jev: jevAnswering({ action: 'search' }) });
     assert.equal(outcome.did, 'Searched for "alan turing"');
+    assert.equal(outcome.miss, false);
   });
 
   it('moves the cursor, then clicks the element Jev picked', async () => {
@@ -106,7 +107,7 @@ describe('createHandler', () => {
       jev: jevAnswering({ action: 'click', target: 'e2' }),
     });
     assert.deepEqual(withoutSnapshot(browser.calls), [
-      ['moveCursor', 2],
+      ['moveCursor', 2, 'click'],
       ['clickElement', 2],
     ]);
     assert.equal(outcome.did, 'Clicked link: Britannica');
@@ -121,6 +122,7 @@ describe('createHandler', () => {
   it('says so when a click has no target', async () => {
     const { outcome, browser } = await run({ said: 'click the thing', jev: jevAnswering({ action: 'click' }) });
     assert.equal(outcome.did, "Couldn't find that on the page");
+    assert.equal(outcome.miss, true);
     assert.deepEqual(withoutSnapshot(browser.calls), []);
   });
 
@@ -128,7 +130,7 @@ describe('createHandler', () => {
     const jev = jevAnswering({ action: 'type', target: 'e4' }, 't2');
     const { outcome, browser } = await run({ said: 'surname Pahuja', jev });
     assert.deepEqual(withoutSnapshot(browser.calls), [
-      ['moveCursor', 4],
+      ['moveCursor', 4, 'type'],
       ['typeInto', 4, 'Pahuja', false],
     ]);
     assert.equal(outcome.did, 'Typed "Pahuja" into field: Surname');
@@ -154,7 +156,7 @@ describe('createHandler', () => {
     });
     assert.deepEqual(withoutSnapshot(browser.calls), [
       ['clearLastTyped'],
-      ['moveCursor', 3],
+      ['moveCursor', 3, 'type'],
       ['typeInto', 3, 'Akash', false],
     ]);
     assert.equal(outcome.did, 'Moved "Akash" to field: First name');
@@ -207,6 +209,7 @@ describe('createHandler', () => {
       did: 'Went back',
       ms: 0,
       early: true,
+      miss: false,
     });
     assert.deepEqual(await eager({ text: 'go back to the list', final: true, id: 'u2' }), {}, 'same utterance');
   });

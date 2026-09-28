@@ -122,5 +122,17 @@ describe('moveCursor', () => {
     await moveCursor(1);
     assert.equal(document.querySelectorAll('#jev-voice-cursor').length, 1);
     assert.match(document.getElementById('last').style.outline, /2px solid/);
+    assert.equal(document.getElementById('first').style.outline, '', 'restores the previous target');
+  });
+
+  it('shows a caret for typing and a dot for clicking', async () => {
+    const document = load(FORM);
+    snapshot();
+    await moveCursor(0, 'type');
+    const cursor = document.getElementById('jev-voice-cursor');
+    assert.equal(cursor.querySelector('.dot').style.display, 'none');
+    assert.equal(cursor.querySelector('.caret').style.display, '');
+    await moveCursor(0, 'click');
+    assert.equal(cursor.querySelector('.caret').style.display, 'none');
   });
 });

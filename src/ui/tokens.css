@@ -1,0 +1,325 @@
+/* Jev Voice "Cue" tokens and shared controls, on the Nocturne palette.
+   Used by the side panel, settings and permission pages. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('../fonts/InterVariable-latin.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: light dark;
+
+  /* light (default) */
+  --jv-bg: #f3f5fe;
+  --jv-surface: #e4e7f5;
+  --jv-raised: #cfd3e5;
+  --jv-text: #292b31;
+  --jv-muted: #595d6c;
+  --jv-subtle: #75798c; /* icons and dashed borders only */
+  --jv-line: color-mix(in srgb, #292b31 18%, transparent);
+  --jv-accent: #5d5294;
+  --jv-accent-text: #5d5294;
+  --jv-accent-fill: #796cbf;
+  --jv-on-accent: #f3f5fe;
+  --jv-accent-wash: #e7e5fe;
+  --jv-accent-edge: #b5abfc;
+  --jv-miss: #7a5a16;
+  --jv-miss-wash: #f6edd6;
+  --jv-error: #a3343f;
+  --jv-error-wash: #f8e3e3;
+
+  --jv-font: 'Inter', system-ui, sans-serif;
+  --jv-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --jv-radius-sm: 4px;
+  --jv-radius-md: 8px;
+  --jv-radius-lg: 14px;
+  --jv-hit: 44px;
+
+  --jv-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --jv-t-word: 90ms;
+  --jv-t-card: 160ms;
+  --jv-t-press: 140ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --jv-bg: #161826;
+    --jv-surface: #232532;
+    --jv-raised: #292b31;
+    --jv-text: #e9e9ed;
+    --jv-muted: #b2b6ca;
+    --jv-subtle: #9397ab;
+    --jv-line: color-mix(in srgb, #e9e9ed 16%, transparent);
+    --jv-accent: #9184d9;
+    --jv-accent-text: #b5abfc;
+    --jv-accent-fill: #9184d9;
+    --jv-on-accent: #161826;
+    --jv-accent-wash: #2b2741;
+    --jv-accent-edge: #5d5294;
+    --jv-miss: #e0bb6e;
+    --jv-miss-wash: #2c2719;
+    --jv-error: #f09a9a;
+    --jv-error-wash: #33201f;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --jv-t-word: 0ms;
+    --jv-t-card: 0ms;
+    --jv-t-press: 0ms;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* `hidden` must win over the display values set on components. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--jv-bg);
+  color: var(--jv-text);
+  font: 14px/1.5 var(--jv-font);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+  font-weight: 500;
+}
+
+p {
+  font-weight: 400;
+}
+
+h1 {
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+}
+
+a {
+  color: var(--jv-accent-text);
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--jv-text);
+}
+
+code {
+  font-family: var(--jv-mono);
+  font-size: 12px;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--jv-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--jv-accent) 30%, transparent);
+}
+
+svg {
+  display: block;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--jv-muted);
+}
+
+.kicker {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jv-muted);
+}
+
+/* Brand mark: the cue (a dot for your voice, a tick for the action). */
+.mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: var(--jv-radius-lg);
+  background: var(--jv-surface);
+  color: var(--jv-accent-text);
+}
+
+/* Buttons */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--jv-hit);
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--jv-radius-md);
+  background: transparent;
+  color: var(--jv-text);
+  font: 500 15px/1.2 var(--jv-font);
+  cursor: pointer;
+  transition: background-color var(--jv-t-press) ease;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: var(--jv-accent-text);
+  border-color: var(--jv-accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--jv-accent) 12%, transparent);
+}
+
+.btn-primary:active:not(:disabled) {
+  background: color-mix(in srgb, var(--jv-accent) 22%, transparent);
+}
+
+.btn-secondary {
+  border-color: var(--jv-line);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--jv-text) 7%, transparent);
+}
+
+.btn-danger {
+  color: var(--jv-error);
+}
+
+.btn-danger:hover {
+  background: color-mix(in srgb, var(--jv-error) 10%, transparent);
+}
+
+.btn-icon {
+  width: var(--jv-hit);
+  padding: 0;
+  color: var(--jv-muted);
+}
+
+.btn-icon:hover {
+  color: var(--jv-text);
+  background: color-mix(in srgb, var(--jv-text) 8%, transparent);
+}
+
+/* Inputs */
+
+.input {
+  width: 100%;
+  min-height: var(--jv-hit);
+  padding: 6px 12px;
+  border: 1px solid var(--jv-line);
+  border-radius: var(--jv-radius-md);
+  background: var(--jv-surface);
+  color: var(--jv-text);
+  caret-color: var(--jv-accent);
+  font: 15px var(--jv-font);
+}
+
+.input:hover {
+  border-color: color-mix(in srgb, var(--jv-text) 45%, transparent);
+}
+
+.input:focus-visible {
+  outline: none;
+  border-color: var(--jv-accent);
+  box-shadow:
+    0 0 0 2px var(--jv-bg),
+    0 0 0 4px var(--jv-accent);
+}
+
+.input[aria-invalid='true'] {
+  border-color: var(--jv-error);
+}
+
+/* Status lines always pair an icon with the text. The icon comes from the tone. */
+
+.status {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 14px;
+  color: var(--jv-muted);
+  text-wrap: pretty;
+}
+
+.status:empty {
+  display: none;
+}
+
+.status::before {
+  content: '';
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  background: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.status.ok {
+  color: var(--jv-accent-text);
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M8 12.5l2.7 2.7L16 9.8'/%3E%3C/svg%3E");
+}
+
+.status.error {
+  color: var(--jv-error);
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l9.5 16.5h-19z'/%3E%3Cpath d='M12 10v4.5'/%3E%3Ccircle cx='12' cy='17.2' r='.7' fill='black'/%3E%3C/svg%3E");
+}
+
+.status.info {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5'/%3E%3Ccircle cx='12' cy='7.8' r='.7' fill='black'/%3E%3C/svg%3E");
+}
+
+.status.progress {
+  --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8' opacity='.3'/%3E%3Cpath d='M12 4a8 8 0 0 1 8 8'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status.progress::before {
+    animation: spin 0.9s linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    rotate: 1turn;
+  }
+}

@@ -28,7 +28,17 @@ import { clearLastTyped, clickElement, moveCursor, scrollPage, snapshot, typeInt
  * @property {string} [did] What happened, in plain words. Absent when nothing happened yet.
  * @property {number} [ms] Time from transcript to action.
  * @property {boolean} [early] Acted on a partial transcript.
+ * @property {boolean} [miss] Understood, but nothing on the page to act on, or a question back.
  */
+
+/** Outcomes that didn't act; the side panel shows them as a miss, not a success. */
+const MISS = {
+  noTarget: "Couldn't find that on the page",
+  noText: "Didn't catch what to type",
+  whichField: 'Which field should it go in?',
+  nothingTyped: 'Nothing has been typed on this page yet',
+};
+const MISSES = new Set(Object.values(MISS));
 
 /**
  * @param {{ jev: import('./jev.js').JevClient, browser: Browser, now?: () => number }} deps
@@ -57,7 +67,7 @@ export function createHandler({ jev, browser, now = () => performance.now() }) {
     acted.add(id);
 
     const did = await perform(command, { text, tab, elements });
-    return { did, ms: Math.round(now() - started), early: !final };
+    return { did, ms: Math.round(now() - started), early: !final, miss: MISSES.has(did) };
   };
 
   async function perform({ action, target, site }, { text, tab, elements }) {
@@ -74,8 +84,8 @@ export function createHandler({ jev, browser, now = () => performance.now() }) {
         return `Searched for "${query}"`;
       }
       case 'click': {
-        if (target === null) return "Couldn't find that on the page";
-        await browser.run(tab.id, moveCursor, [target]);
+        if (target === null) return MISS.noTarget;
+        await browser.run(tab.id, moveCursor, [target, 'click']);
         // Links that open a new tab are blocked as pop-ups when clicked by a script.
         const newTabUrl = await browser.run(tab.id, clickElement, [target]);
         if (newTabUrl) await browser.openTab(newTabUrl);
@@ -83,16 +93,16 @@ export function createHandler({ jev, browser, now = () => performance.now() }) {
       }
       case 'type': {
         const { text: typed, submit } = await pickText(text);
-        if (!typed) return "Didn't catch what to type";
-        if (target !== null) await browser.run(tab.id, moveCursor, [target]);
+        if (!typed) return MISS.noText;
+        if (target !== null) await browser.run(tab.id, moveCursor, [target, 'type']);
         await browser.run(tab.id, typeInto, [target, typed, submit]);
         return `Typed "${typed}"${label ? ` into ${label}` : ''}${submit ? ' and submitted' : ''}`;
       }
       case 'retarget': {
-        if (target === null) return 'Which field should it go in?';
+        if (target === null) return MISS.whichField;
         const moved = await browser.run(tab.id, clearLastTyped);
-        if (!moved) return 'Nothing has been typed on this page yet';
-        await browser.run(tab.id, moveCursor, [target]);
+        if (!moved) return MISS.nothingTyped;
+        await browser.run(tab.id, moveCursor, [target, 'type']);
         await browser.run(tab.id, typeInto, [target, moved, false]);
         return `Moved "${moved}" to ${label}`;
       }

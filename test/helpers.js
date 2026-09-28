@@ -49,6 +49,8 @@ export function installDom(html) {
     'DOMParser',
     'matchMedia',
     'innerHeight',
+    'innerWidth',
+    'getComputedStyle',
     'HTMLInputElement',
     'HTMLTextAreaElement',
     'Event',

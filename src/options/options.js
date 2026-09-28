@@ -33,7 +33,7 @@ const selected = () => radios.find((radio) => radio.checked)?.value ?? provider;
 
 /** Steps, placeholder and privacy line follow the provider being shown. */
 function showProvider(id) {
-  document.getElementById('steps').innerHTML = STEPS[id].map((step) => `<li>${step}</li>`).join('');
+  document.getElementById('steps').innerHTML = STEPS[id].map((step) => `<li><span>${step}</span></li>`).join('');
   input.placeholder = PROVIDERS[id].placeholder;
   document.getElementById('host').textContent = PROVIDERS[id].host;
 }
@@ -46,8 +46,12 @@ function render(editing = false) {
   input.value = '';
   radios.forEach((radio) => (radio.checked = radio.value === provider));
   showProvider(provider);
-  document.getElementById('provider-label').textContent = PROVIDERS[provider].label;
-  document.getElementById('masked').textContent = maskKey(apiKey);
+  input.removeAttribute('aria-invalid');
+  document.getElementById('current').hidden = !(editing && apiKey);
+  for (const id of ['provider-label', 'current-provider']) {
+    document.getElementById(id).textContent = PROVIDERS[provider].label;
+  }
+  for (const id of ['masked', 'current-masked']) document.getElementById(id).textContent = maskKey(apiKey);
   if (showForm) input.focus();
 }
 
@@ -75,9 +79,10 @@ async function test(id, key) {
   }
 }
 
-function setStatus(el, text, tone) {
+/** @param {'ok' | 'error' | 'info' | 'progress'} [tone] Picks the icon shown with the text. */
+function setStatus(el, text, tone = 'info') {
   el.textContent = text;
-  el.className = tone ? `status-${tone}` : 'muted';
+  el.className = `status ${tone}`;
 }
 
 form.addEventListener('submit', async (event) => {
@@ -86,10 +91,14 @@ form.addEventListener('submit', async (event) => {
   const key = input.value.trim();
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
-  setStatus(formStatus, `Checking key with ${PROVIDERS[id].label}…`);
+  input.removeAttribute('aria-invalid');
+  setStatus(formStatus, `Checking key with ${PROVIDERS[id].label}…`, 'progress');
   const error = await test(id, key);
   button.disabled = false;
-  if (error) return setStatus(formStatus, error, 'error');
+  if (error) {
+    input.setAttribute('aria-invalid', 'true');
+    return setStatus(formStatus, error, 'error');
+  }
   apiKey = key;
   provider = id;
   await chrome.storage.local.set({ apiKey, provider });
@@ -99,7 +108,7 @@ form.addEventListener('submit', async (event) => {
 });
 
 document.getElementById('test').addEventListener('click', async () => {
-  setStatus(connectedStatus, 'Checking key…');
+  setStatus(connectedStatus, 'Checking key…', 'progress');
   const error = await test(provider, apiKey);
   setStatus(connectedStatus, error || 'Key works.', error ? 'error' : 'ok');
 });

@@ -49,12 +49,16 @@ export function snapshot() {
 }
 
 /**
- * Glides a drawn cursor to an element and outlines it. Extensions can't move
- * the real pointer, so this shows the user what is about to be clicked.
+ * Glides the cue mark (a ring and tick) beside an element and outlines it.
+ * Extensions can't move the real pointer, so this shows the user what is about
+ * to be clicked or typed into. Every stroke is keylined (light over a dark
+ * halo) so it reads on any page.
  *
  * @param {number} index
+ * @param {'click' | 'type'} [kind] Click lands past the lower-right corner with
+ *   a pulse; type lands at the field's text start with a caret and no pulse.
  */
-export async function moveCursor(index) {
+export async function moveCursor(index, kind = 'click') {
   const el = document.querySelector(`[data-jev-voice="${index}"]`);
   if (!el) return;
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -65,26 +69,75 @@ export async function moveCursor(index) {
     cursor = document.createElement('div');
     cursor.id = 'jev-voice-cursor';
     cursor.setAttribute('aria-hidden', 'true');
+    const halo = 'stroke="#161826" stroke-opacity=".8" stroke-width="5"';
+    const line = 'stroke="#e7e5fe" stroke-width="2"';
     cursor.innerHTML =
-      '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2l6.5 18 2.3-7.2L20 10.5z" fill="#1f2328" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+      '<svg width="36" height="36" viewBox="0 0 36 36" style="overflow:visible;display:block">' +
+      '<g fill="none" stroke-linecap="round">' +
+      '<circle class="pulse" cx="18" cy="18" r="11" stroke="#b5abfc" stroke-width="1.5" opacity="0"/>' +
+      `<g class="ring"><circle cx="18" cy="18" r="11" ${halo}/><circle cx="18" cy="18" r="11" ${line}/></g>` +
+      `<path d="M26 10l5-5" ${halo}/><path d="M26 10l5-5" ${line}/></g>` +
+      '<circle class="dot" cx="18" cy="18" r="4" fill="#9184d9" stroke="#161826" stroke-width="1.5"/>' +
+      '<rect class="caret" x="16.5" y="11" width="3" height="14" rx="1.5" fill="#9184d9" stroke="#161826" stroke-width="1.25"/>' +
+      '</svg>';
     cursor.style.cssText =
-      'position:fixed;left:0;top:0;z-index:2147483647;pointer-events:none;transform:translate(50vw,50vh);transition:transform 320ms cubic-bezier(.2,.8,.2,1),opacity 250ms';
+      'position:fixed;left:0;top:0;width:36px;height:36px;margin:-18px 0 0 -18px;z-index:2147483647;' +
+      'pointer-events:none;opacity:0;transform:translate(100vw,50vh);' +
+      'transition:transform 320ms cubic-bezier(.2,.8,.2,1),opacity 240ms ease';
+    for (const part of cursor.querySelectorAll('.pulse, .ring')) {
+      part.style.transformBox = 'fill-box';
+      part.style.transformOrigin = 'center';
+    }
     document.documentElement.append(cursor);
-    cursor.getBoundingClientRect(); // commit the start position so the first move animates
+    cursor.getBoundingClientRect(); // commit the start position (the panel edge) so the first move animates
   }
+  cursor.jevRestore?.();
+  cursor.querySelector('.dot').style.display = kind === 'click' ? '' : 'none';
+  cursor.querySelector('.caret').style.display = kind === 'type' ? '' : 'none';
 
   const r = el.getBoundingClientRect();
-  cursor.style.transition = reduceMotion ? 'none' : cursor.style.transition;
+  const x = kind === 'type' ? r.left + (parseFloat(getComputedStyle(el).paddingLeft) || 0) : r.right + 10;
+  const y = kind === 'type' ? r.top + r.height / 2 : r.bottom + 10;
+  const clamp = (v, max) => Math.min(Math.max(v, 18), max - 18);
+  cursor.style.transition = reduceMotion
+    ? 'opacity 120ms ease'
+    : 'transform 320ms cubic-bezier(.2,.8,.2,1),opacity 240ms ease';
+  cursor.style.transform = `translate(${clamp(x, innerWidth)}px, ${clamp(y, innerHeight)}px)`;
   cursor.style.opacity = '1';
-  cursor.style.transform = `translate(${r.left + r.width / 2 - 4}px, ${r.top + r.height / 2 - 2}px)`;
 
-  const previousOutline = el.style.outline;
-  el.style.outline = '2px solid #3b5bdb';
-  await new Promise((resolve) => setTimeout(resolve, reduceMotion ? 50 : 360));
-  setTimeout(() => {
-    el.style.outline = previousOutline;
-    cursor.style.opacity = '0';
-  }, 1200);
+  await new Promise((resolve) => setTimeout(resolve, reduceMotion ? 120 : 320));
+
+  // Outline the target, keeping the page's own inline values to restore.
+  const saved = [el.style.outline, el.style.outlineOffset, el.style.boxShadow];
+  el.style.outline = '2px solid #b5abfc';
+  el.style.outlineOffset = '2px';
+  el.style.boxShadow = (saved[2] ? saved[2] + ', ' : '') + '0 0 0 6px rgba(22,24,38,.72)';
+  if (kind === 'click' && !reduceMotion) {
+    cursor
+      .querySelector('.ring')
+      .animate?.([{ transform: 'scale(1)' }, { transform: 'scale(.73)' }, { transform: 'scale(1)' }], 280);
+    cursor.querySelector('.pulse').animate?.(
+      [
+        { transform: 'scale(1)', opacity: 0.6 },
+        { transform: 'scale(1.55)', opacity: 0 },
+      ],
+      260,
+    );
+  }
+
+  const hide = setTimeout(
+    () => {
+      cursor.jevRestore?.();
+      cursor.style.transition = 'opacity 240ms ease';
+      cursor.style.opacity = '0';
+    },
+    reduceMotion ? 1200 : 900,
+  );
+  cursor.jevRestore = () => {
+    clearTimeout(hide);
+    [el.style.outline, el.style.outlineOffset, el.style.boxShadow] = saved;
+    cursor.jevRestore = null;
+  };
 }
 
 /**

@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-09-28
+
+### Changed
+
+- New look, "Cue", across the side panel, settings and microphone pages, with light and dark themes and bundled Inter.
+- The microphone is a large button with clear idle, listening, unavailable and blocked states, and a level meter while listening.
+- What you say streams in word by word. When a command runs before you finish, the words that triggered it are underlined.
+- The newest activity entry is a last-action card. Successes, misses ("Couldn't find that on the page") and errors differ by icon and shape as well as colour. Commands that ran early are tagged "before you finished".
+- In browsers without speech recognition, the typed command field becomes the main control.
+- "What can I say?" is grouped by verb and stays open until your first command.
+- The on-page cursor is now a ringed cue mark that can't be mistaken for your pointer. It lands beside the target instead of on its label, shows a caret when typing, and reads on light, dark and busy pages.
+- New extension icon.
+
 ## [1.1.0] - 2026-09-27
 
 ### Added
@@ -28,5 +41,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - On-device speech recognition on Chrome 139 and later.
 - API key check on save; clear messages for rejected keys, exhausted budgets and rate limits.
 
+[1.2.0]: https://github.com/dgr8akki/jev-voice/releases/tag/v1.2.0
 [1.1.0]: https://github.com/dgr8akki/jev-voice/releases/tag/v1.1.0
 [1.0.0]: https://github.com/dgr8akki/jev-voice/releases/tag/v1.0.0

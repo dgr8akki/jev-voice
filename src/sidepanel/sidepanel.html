@@ -4,71 +4,143 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Jev Voice</title>
+    <link rel="stylesheet" href="../ui/tokens.css" />
     <link rel="stylesheet" href="sidepanel.css" />
     <script type="module" src="sidepanel.js"></script>
   </head>
   <body>
     <header class="topbar">
-      <div class="brand">
-        <span id="status-dot" class="status-dot" aria-hidden="true"></span>
-        <h1>Jev Voice</h1>
-      </div>
+      <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+      <h1>Jev Voice</h1>
       <button
         id="settings-toggle"
-        class="icon-button"
+        class="btn btn-icon"
         type="button"
         aria-expanded="false"
         aria-controls="settings"
         aria-label="Settings"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
-          <circle cx="16" cy="7" r="2" />
-          <circle cx="10" cy="17" r="2" />
+        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 8h9M17 8h3M4 16h3M11 16h9" />
+          <circle cx="15" cy="8" r="2" />
+          <circle cx="9" cy="16" r="2" />
         </svg>
       </button>
     </header>
 
-    <section id="settings" class="panel settings" hidden>
+    <section id="settings" class="settings" aria-label="Settings" hidden>
+      <span class="kicker">Settings</span>
       <div class="connection">
-        <p id="connection" class="hint" role="status"></p>
-        <button id="open-settings" type="button"></button>
+        <svg class="key" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="8" cy="15" r="4" />
+          <path d="M11 12l8.5-8.5M16 7l2.5 2.5" />
+        </svg>
+        <p id="connection" role="status"></p>
+        <button id="open-settings" type="button" class="btn"></button>
       </div>
     </section>
 
-    <main>
-      <button id="mic" type="button" class="mic" aria-pressed="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect x="9" y="3" width="6" height="11" rx="3" />
-          <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-        </svg>
+    <div class="input-block">
+      <button id="mic" type="button" class="mic" data-state="idle" aria-pressed="false">
+        <span class="mic-disc">
+          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <rect class="mic-body" x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+            <path class="mic-slash" d="M4 4l16 16" />
+          </svg>
+        </span>
         <span id="mic-label">Start listening</span>
+        <span class="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       </button>
-      <p id="heard" class="heard" aria-live="polite"></p>
 
-      <form id="command-form">
-        <label for="command" class="visually-hidden">Type a command</label>
-        <input id="command" type="text" autocomplete="off" placeholder="Or type a command" />
-      </form>
+      <div class="live">
+        <p id="heard" class="heard" aria-live="polite"></p>
+        <p id="notice" class="notice" aria-live="polite"></p>
+        <div class="rule"></div>
+      </div>
+    </div>
 
-      <details class="examples">
-        <summary>What can I say?</summary>
-        <ul>
-          <li>“Go to wikipedia”, “open facebook dot com”</li>
-          <li>“Search for Alan Turing”</li>
-          <li>“Click the first result”, “open the pricing link”</li>
-          <li>“Type hello in the email field and press enter”</li>
-          <li>“No, that's the first name, not the surname”</li>
-          <li>“Scroll down”, “go back”, “reload”</li>
-          <li>“New tab”, “next tab”, “close this tab”</li>
-        </ul>
-      </details>
+    <form id="command-form" class="command">
+      <label for="command" class="visually-hidden">Type a command</label>
+      <span class="command-field">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="2.5" y="6" width="19" height="12" rx="2" />
+          <path d="M6.5 10h1M10.5 10h1M14.5 10h1M8 14h8" />
+        </svg>
+        <input id="command" class="input" type="text" autocomplete="off" placeholder="Or type a command" />
+      </span>
+      <button class="btn btn-secondary btn-icon" type="submit" aria-label="Run command">
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M19 5v6a3 3 0 0 1-3 3H6" />
+          <path d="M9.5 10.5L6 14l3.5 3.5" />
+        </svg>
+      </button>
+    </form>
 
-      <section class="activity" aria-labelledby="activity-heading">
-        <h2 id="activity-heading">Activity</h2>
-        <ol id="activity" class="activity-list" aria-live="polite"></ol>
-        <p id="activity-empty" class="hint">Commands you give will appear here.</p>
-      </section>
-    </main>
+    <details id="examples" class="examples" open>
+      <summary>
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" /></svg>
+        <span>What can I say?</span>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </summary>
+      <dl>
+        <dt>Go</dt>
+        <dd>“go to wikipedia”<br />“open facebook dot com”</dd>
+        <dt>Search</dt>
+        <dd>“search for Alan Turing”</dd>
+        <dt>Click</dt>
+        <dd>“click the first result”<br />“open the pricing link”</dd>
+        <dt>Type</dt>
+        <dd>“type hello in the email field and press enter”</dd>
+        <dt>Fix</dt>
+        <dd>“no, that’s the first name, not the surname”</dd>
+        <dt>Page</dt>
+        <dd>“scroll down” · “go back” · “reload”</dd>
+        <dt>Tabs</dt>
+        <dd>“new tab” · “next tab” · “close this tab”</dd>
+      </dl>
+    </details>
+
+    <section class="activity" aria-labelledby="activity-heading">
+      <h2 id="activity-heading" class="kicker">Activity</h2>
+      <p id="activity-empty" class="empty">Commands you give will appear here.</p>
+      <ol id="activity" class="activity-list" aria-live="polite"></ol>
+    </section>
+
+    <template id="entry">
+      <li>
+        <span class="entry-icon">
+          <svg class="i-ok" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12.5l2.7 2.7L16 9.8" />
+          </svg>
+          <svg class="i-miss" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" stroke-dasharray="3 2.4" />
+            <path d="M9.6 9.6a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.4v.3" />
+            <circle cx="12" cy="16.8" r=".7" fill="currentColor" />
+          </svg>
+          <svg class="i-error" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3.5l9.5 16.5h-19z" />
+            <path d="M12 10v4.5" />
+            <circle cx="12" cy="17.2" r=".7" fill="currentColor" />
+          </svg>
+          <svg class="i-ignored" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12h8" />
+          </svg>
+        </span>
+        <p class="said"></p>
+        <p class="outcome"><span class="text"></span><span class="tail"></span></p>
+        <span class="cue-tag">
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="8" cy="12" r="3.4" fill="currentColor" stroke="none" />
+            <path d="M16 5v14" stroke-width="2.2" />
+          </svg>
+          before you finished
+        </span>
+      </li>
+    </template>
   </body>
 </html>

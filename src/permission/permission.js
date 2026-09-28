@@ -5,11 +5,11 @@ async function requestMicrophone() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach((track) => track.stop());
-    status.textContent = 'Microphone allowed. Close this tab and press Start listening in the side panel.';
-    status.className = 'status-ok';
+    status.textContent = 'Microphone allowed. You can close this tab and start listening in the side panel.';
+    status.className = 'status ok';
   } catch (error) {
-    status.textContent = `Microphone blocked (${error.name}). Allow it from the icon in the address bar, then try again.`;
-    status.className = 'status-error';
+    status.textContent = `Microphone blocked (${error.name}). Click the icon at the left of the address bar, set Microphone to Allow, then press Allow microphone again.`;
+    status.className = 'status error';
   }
 }
 

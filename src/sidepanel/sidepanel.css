@@ -1,123 +1,12 @@
-/* Jev Voice side panel.
-   A quiet slate instrument panel; the single blue accent means "listening" and nothing else. */
-
-:root {
-  color-scheme: light dark;
-
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --ink: #1f2328;
-  --muted: #59636e;
-  --line: #dde1e6;
-  --accent: #3b5bdb;
-  --accent-ink: #ffffff;
-  --accent-soft: #e8edfc;
-  --danger: #b42318;
-  --ok: #2f7d4f;
-
-  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --space: 12px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #15171b;
-    --surface: #1c1f24;
-    --ink: #e6e8eb;
-    --muted: #9aa1ab;
-    --line: #2c3139;
-    --accent: #8da2fb;
-    --accent-ink: #10142a;
-    --accent-soft: #232a45;
-    --danger: #f08b80;
-    --ok: #7cc79b;
-  }
-}
-
-* {
-  box-sizing: border-box;
-}
-
-/* `hidden` must win over the display values set on components below. */
-[hidden] {
-  display: none !important;
-}
+/* Jev Voice side panel, "Cue".
+   Glance order: status dot and mic (is it listening), the live line (what did
+   it hear), the last-action card (what did it just do). */
 
 body {
-  margin: 0;
-  padding: var(--space);
-  background: var(--bg);
-  color: var(--ink);
-  font: 14px/1.5 var(--font-ui);
-}
-
-h1,
-h2,
-p {
-  margin: 0;
-}
-
-button,
-input {
-  font: inherit;
-  color: inherit;
-}
-
-button {
-  cursor: pointer;
-  padding: 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-}
-
-button:hover {
-  border-color: var(--muted);
-}
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
-}
-
-input[type='text'] {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-}
-
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.hint {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 14px 16px;
 }
 
 /* Top bar */
@@ -125,163 +14,557 @@ svg {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space);
+  gap: 10px;
+  min-height: 52px;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.brand h1 {
+.topbar h1 {
+  flex: 1;
   font-size: 15px;
-  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
+  flex: none;
   border-radius: 50%;
-  background: var(--line);
+  border: 2px solid var(--jv-subtle);
 }
 
 .status-dot.listening {
-  background: var(--accent);
+  border: 0;
+  background: var(--jv-accent-fill);
+  box-shadow: 0 0 0 4px var(--jv-accent-wash);
 }
 
-.icon-button {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border-color: transparent;
-  background: transparent;
-  color: var(--muted);
-}
-
-.icon-button[aria-expanded='true'] {
-  background: var(--accent-soft);
-  color: var(--ink);
+#settings-toggle[aria-expanded='true'] {
+  color: var(--jv-accent-text);
+  background: var(--jv-accent-wash);
+  box-shadow: inset 0 0 0 1px var(--jv-accent);
 }
 
 /* Settings */
 
-.panel {
-  padding: var(--space);
-  margin-bottom: var(--space);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--jv-radius-lg);
+  background: var(--jv-surface);
 }
 
 .connection {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Microphone */
-
-main {
-  display: grid;
-  gap: 10px;
-}
-
-.mic {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
-  padding: 16px;
-  border-radius: var(--radius-md);
-  font-size: 15px;
-  font-weight: 500;
 }
 
-.mic[aria-pressed='true'] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+.connection .key {
+  color: var(--jv-accent-text);
 }
 
-.heard {
-  color: var(--muted);
-  font-style: italic;
+.connection p {
+  flex: 1;
+  font-size: 13px;
+  text-wrap: pretty;
 }
 
-.heard:empty {
+.settings[data-connected='false'] .connection {
+  flex-wrap: wrap;
+}
+
+.settings[data-connected='false'] .key {
   display: none;
 }
 
-/* Examples */
-
-.examples summary {
-  cursor: pointer;
-  color: var(--muted);
+.settings[data-connected='false'] .connection p {
+  flex-basis: 100%;
+  font-size: 14px;
 }
 
-.examples ul {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  color: var(--muted);
+.settings[data-connected='false'] #open-settings {
+  width: 100%;
+}
+
+/* Voice input: the live line moves beside the mic on wide panels by wrapping. */
+
+.input-block {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.mic {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 80px;
+  padding: 12px 16px;
+  border: 1px solid var(--jv-accent);
+  border-radius: var(--jv-radius-lg);
+  background: transparent;
+  color: var(--jv-text);
+  font: 500 17px var(--jv-font);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--jv-t-press) ease;
+}
+
+.mic:hover {
+  background: color-mix(in srgb, var(--jv-accent) 12%, transparent);
+}
+
+.mic-disc {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border: 1.5px solid var(--jv-accent);
+  border-radius: 50%;
+  color: var(--jv-accent-text);
+}
+
+.mic-slash,
+.meter {
+  display: none;
+}
+
+.mic[data-state='listening'] {
+  border-width: 2px;
+  padding: 11px 15px;
+  background: var(--jv-accent-wash);
+}
+
+.mic[data-state='listening'] .mic-disc {
+  border: 0;
+  background: var(--jv-accent-fill);
+  color: var(--jv-on-accent);
+}
+
+.mic[data-state='listening'] .mic-body {
+  fill: currentColor;
+}
+
+.mic[data-state='listening'] .meter {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 28px;
+  margin-left: auto;
+}
+
+.meter i {
+  width: 3px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--jv-accent);
+}
+
+/* The one moving thing. It holds still under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .meter i {
+    animation: level 900ms ease-in-out infinite alternate;
+  }
+  .meter i:nth-child(2) {
+    animation-delay: -300ms;
+  }
+  .meter i:nth-child(3) {
+    animation-delay: -600ms;
+  }
+  .meter i:nth-child(4) {
+    animation-delay: -150ms;
+  }
+  .meter i:nth-child(5) {
+    animation-delay: -450ms;
+  }
+}
+
+@keyframes level {
+  from {
+    height: 6px;
+  }
+  to {
+    height: 26px;
+  }
+}
+
+.mic[data-state='off'] {
+  border: 1px dashed var(--jv-subtle);
+  color: var(--jv-muted);
+}
+
+.mic[data-state='off'] .mic-disc {
+  border: 1.5px dashed var(--jv-subtle);
+  color: var(--jv-muted);
+}
+
+.mic[data-state='off']:hover {
+  background: color-mix(in srgb, var(--jv-text) 5%, transparent);
+}
+
+.mic[data-state='error'] {
+  border-color: var(--jv-error);
+}
+
+.mic[data-state='error'] .mic-disc {
+  border-color: var(--jv-error);
+  color: var(--jv-error);
+}
+
+.mic[data-state='error'] .mic-slash,
+.mic[data-slash] .mic-slash {
+  display: inline;
+}
+
+.live {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 2px 0;
+}
+
+.heard {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.28em;
+  font-size: 19px;
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+
+.heard:empty,
+.notice:empty {
+  display: none;
+}
+
+.heard span:last-child {
+  animation: word-in var(--jv-t-word) ease-out;
+}
+
+.heard .fired {
+  text-decoration: underline 2px var(--jv-accent);
+  text-underline-offset: 6px;
+}
+
+.heard .partial {
+  color: var(--jv-muted);
+}
+
+.heard .partial::after {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 3px;
+  vertical-align: -0.15em;
+  border-radius: 1px;
+  background: var(--jv-accent);
+}
+
+@keyframes word-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.notice {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--jv-muted);
+  text-wrap: pretty;
+}
+
+.notice.problem {
+  font-size: 14px;
+  color: var(--jv-error);
+}
+
+.notice.problem::before {
+  content: '';
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3.5l9.5 16.5h-19z'/%3E%3Cpath d='M12 10v4.5'/%3E%3Ccircle cx='12' cy='17.2' r='.7' fill='black'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+}
+
+.rule {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--line-tone, var(--jv-line)) 48px,
+    var(--line-tone, var(--jv-line)) calc(100% - 48px),
+    transparent
+  );
+}
+
+body.listening .rule {
+  --line-tone: var(--jv-accent);
+}
+
+/* Typed command. Where speech is unavailable it becomes the main control. */
+
+.command {
+  display: flex;
+  gap: 8px;
+}
+
+.command-field {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.command-field svg {
+  position: absolute;
+  left: 12px;
+  color: var(--jv-subtle);
+  pointer-events: none;
+}
+
+.command-field:focus-within svg,
+body.typing-first .command-field svg {
+  color: var(--jv-accent-text);
+}
+
+.command .input {
+  padding-left: 40px;
+}
+
+body.typing-first .command .input {
+  min-height: 54px;
+  font-size: 16px;
+  border-color: var(--jv-accent);
+}
+
+body.typing-first .command .btn-icon {
+  width: 54px;
+}
+
+/* What can I say? */
+
+.examples summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--jv-hit);
+  list-style: none;
+  font-size: 14px;
+  color: var(--jv-accent-text);
+  border-radius: var(--jv-radius-md);
+  cursor: pointer;
+}
+
+.examples summary::-webkit-details-marker {
+  display: none;
+}
+
+.examples[open] .chevron {
+  rotate: 180deg;
+}
+
+.examples dl {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 10px 12px;
+  margin: 0;
+  padding: 6px 2px 14px;
+  font-size: 14px;
+}
+
+.examples dt {
+  padding-top: 2px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--jv-muted);
+}
+
+.examples dd {
+  margin: 0;
 }
 
 /* Activity */
 
 .activity {
-  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.activity h2 {
+.empty {
+  padding: 16px;
+  border: 1px dashed var(--jv-line);
+  border-radius: var(--jv-radius-md);
   font-size: 13px;
-  font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 4px;
+  color: var(--jv-muted);
 }
 
 .activity-list {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 13px;
 }
 
 .activity-list li {
-  padding: 6px 0;
-  border-top: 1px solid var(--line);
+  --tone: var(--jv-accent-text);
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 1px;
+  padding: 9px 2px;
+  background: linear-gradient(to right, transparent, var(--jv-line) 48px, var(--jv-line) calc(100% - 48px), transparent)
+    no-repeat bottom / 100% 1px;
 }
 
-.activity-list .said {
+.activity-list li[data-kind='miss'] {
+  --tone: var(--jv-miss);
+  --wash: var(--jv-miss-wash);
+}
+
+.activity-list li[data-kind='error'] {
+  --tone: var(--jv-error);
+  --wash: var(--jv-error-wash);
+}
+
+.activity-list li[data-kind='ignored'] {
+  --tone: var(--jv-subtle);
+}
+
+.entry-icon {
+  grid-row: 1 / span 3;
+  display: flex;
+  padding-top: 2px;
+  color: var(--tone);
+}
+
+.entry-icon svg {
+  display: none;
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+li[data-kind='ok'] .i-ok,
+li[data-kind='miss'] .i-miss,
+li[data-kind='error'] .i-error,
+li[data-kind='ignored'] .i-ignored {
   display: block;
 }
 
-.activity-list .result {
-  color: var(--muted);
+.said {
+  font-size: 12px;
+  color: var(--jv-muted);
+  text-wrap: pretty;
 }
 
-.activity-list .error {
-  color: var(--danger);
+.said:empty {
+  display: none;
 }
 
-/* The one moving element: a slow pulse on the dot while the mic is open. */
-@media (prefers-reduced-motion: no-preference) {
-  .status-dot.listening {
-    animation: pulse 1.6s ease-in-out infinite;
-  }
-
-  button {
-    transition:
-      background-color 120ms ease,
-      border-color 120ms ease;
-  }
+.outcome {
+  font-size: 14px;
+  line-height: 1.35;
+  text-wrap: pretty;
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.35;
+li[data-kind='ignored'] .outcome {
+  color: var(--jv-muted);
+}
+
+.tail {
+  margin-left: 0.3em;
+  color: var(--jv-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cue-tag {
+  display: none;
+}
+
+/* The newest entry is the last-action card. */
+
+.activity-list li:first-child {
+  grid-template-columns: 32px minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 3px;
+  margin-bottom: 6px;
+  padding: 12px;
+  border: 1px solid var(--edge, transparent);
+  border-radius: var(--jv-radius-lg);
+  background: var(--wash, var(--jv-surface));
+  animation: card-in var(--jv-t-card) var(--jv-ease);
+}
+
+.activity-list li:first-child[data-kind='miss'],
+.activity-list li:first-child[data-kind='error'] {
+  --edge: var(--tone);
+}
+
+.activity-list li:first-child[data-early] {
+  --wash: var(--jv-accent-wash);
+  --edge: var(--jv-accent);
+}
+
+li:first-child .entry-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--jv-radius-md);
+  background: var(--jv-bg);
+}
+
+li:first-child .entry-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke-width: 1.9;
+}
+
+li:first-child .outcome {
+  font-size: 16px;
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+li:first-child .tail {
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+li:first-child .tail .early-text {
+  display: none;
+}
+
+li:first-child[data-early] .cue-tag {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 6px;
+  background: var(--jv-bg);
+  color: var(--jv-accent-text);
+  font-size: 12px;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
   }
 }
