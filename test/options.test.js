@@ -187,5 +187,6 @@ describe('options page', () => {
     await connect(page, 'vck_abcdefghijklmnop1234');
     assert.equal(page.$('api-key').getAttribute('aria-invalid'), 'true');
     assert.match(text(page.$('key-status')), /key was rejected/);
+    assert.equal(page.document.activeElement, page.$('api-key'), 'focus returns to the field to fix');
   });
 });

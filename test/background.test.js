@@ -5,11 +5,17 @@ import { setImmediate as tick } from 'node:timers/promises';
 // Loads background.js against a chrome namespace shaped like an older Chrome,
 // where storage.local.setAccessLevel is present but refuses the local area.
 // The query string defeats the module cache so each case evaluates afresh.
-async function load(name, setAccessLevel, store = {}) {
+async function load(name, setAccessLevel, store = {}, session = {}) {
   const listeners = { message: [], installed: [] };
   globalThis.chrome = {
     sidePanel: { setPanelBehavior() {} },
-    storage: { local: { get: async () => store, setAccessLevel } },
+    storage: {
+      local: { get: async () => store, setAccessLevel },
+      session: {
+        get: async (key) => ({ [key]: session[key] }),
+        set: async (items) => Object.assign(session, items),
+      },
+    },
     runtime: {
       onInstalled: { addListener: (fn) => listeners.installed.push(fn) },
       onMessage: { addListener: (fn) => listeners.message.push(fn) },
@@ -72,6 +78,36 @@ describe('background service worker', () => {
       assert.equal(logged.length, 2, 'but the failure is still logged');
     } finally {
       console.error = error;
+    }
+  });
+
+  it('keeps a 429 pause across a worker restart, in session storage', async () => {
+    const fetches = [];
+    globalThis.fetch = async (...args) => {
+      fetches.push(args);
+      return new Response('{}', { status: 429, headers: { 'retry-after': '40' } });
+    };
+    try {
+      const session = {};
+      const first = await load('pause1', () => {}, { apiKey: 'vck_test' }, session);
+      globalThis.chrome.tabs = { query: async () => [{ id: 1, index: 0, windowId: 1, url: 'https://x.example/' }] };
+      globalThis.chrome.scripting = { executeScript: async () => [{ result: ['link: Docs'] }] };
+      const ask = (listeners, id) =>
+        new Promise((resolve) => {
+          listeners.message[0]({ type: 'transcript', text: 'click docs', final: true, id }, {}, resolve);
+        });
+      assert.match((await ask(first.listeners, 'p1')).error, /busy.*40s/);
+      assert.equal(fetches.length, 1);
+      assert.ok(session['jev:pausedUntil'] > Date.now(), 'the pause was written to chrome.storage.session');
+
+      // A fresh worker: module state is gone, the session area is not.
+      const second = await load('pause2', () => {}, { apiKey: 'vck_test' }, session);
+      globalThis.chrome.tabs = { query: async () => [{ id: 1, index: 0, windowId: 1, url: 'https://x.example/' }] };
+      globalThis.chrome.scripting = { executeScript: async () => [{ result: ['link: Docs'] }] };
+      assert.match((await ask(second.listeners, 'p2')).error, /busy/);
+      assert.equal(fetches.length, 1, 'no request while the persisted pause runs');
+    } finally {
+      delete globalThis.fetch;
     }
   });
 

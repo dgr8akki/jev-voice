@@ -9,6 +9,8 @@
 
 import {
   buildQuestions,
+  cleanText,
+  describeElement,
   localCommand,
   navigationUrl,
   searchQuery,
@@ -116,8 +118,13 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
     let restricted = false;
     if (!command) {
       ({ elements, restricted } = await lookAtPage(tab.id, id, final));
+      // The state carries the same cleaned labels as the criteria: raw page text never leaves the browser.
       const answers = await jev.evaluate({
-        state: { transcript: text, page: { url: tab.url, title: tab.title }, elements },
+        state: {
+          transcript: text,
+          page: { url: tab.url, title: cleanText(tab.title) },
+          elements: elements.map(describeElement),
+        },
         questions: buildQuestions({ elements, final, text }),
       });
       command = toCommand(answers, { final });
@@ -140,6 +147,9 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
       case 'navigate': {
         const url = navigationUrl(text, site);
         await browser.navigate(tab.id, url);
+        const looked = new URL(url).searchParams.get('btnI') ? new URL(url).searchParams.get('q') : null;
+        // No known site or spoken domain: it went through a search, so say what was searched.
+        if (looked) return `Opened the top result for "${looked}"`;
         return `Opened ${new URL(url).hostname.replace(/^www\./, '')}`;
       }
       case 'search': {
@@ -152,8 +162,9 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
         await browser.run(tab.id, moveCursor, [target, 'click']);
         // Links that open a new tab are blocked as pop-ups when clicked by a script.
         const result = await browser.run(tab.id, clickElement, [target]);
-        if (result?.blocked) return MISS.badNewTab;
-        if (result?.newTab) await browser.openTab(result.newTab);
+        if (!result) return MISS.noTarget; // the marker was gone by the time the click ran
+        if (result.blocked) return MISS.badNewTab;
+        if (result.newTab) await browser.openTab(result.newTab);
         return `Clicked ${label}`;
       }
       case 'type': {

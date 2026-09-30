@@ -76,6 +76,14 @@ describe('snapshot', () => {
     ]);
   });
 
+  it('ignores aria-labelledby targets that hold user content', () => {
+    load(`<div id="draft" contenteditable="true">my secret draft</div>
+      <input id="other" value="typed value" />
+      <span id="ok">Send</span>
+      <button aria-labelledby="draft other ok">x</button>`);
+    assert.deepEqual(snapshot(), ['field: (unlabeled)', 'field: (unlabeled)', 'button: Send']);
+  });
+
   it('never uses what the user typed as a label', () => {
     load(`<input value="hunter2" /><textarea>my private notes</textarea>`);
     assert.deepEqual(snapshot(), ['field: (unlabeled)', 'field: (unlabeled)']);
@@ -100,14 +108,25 @@ describe('snapshot', () => {
 });
 
 describe('clearMarkers', () => {
-  it('removes every trace the extension left on the page', async () => {
+  it('drops the index markers but lets the marker and highlight finish their own fade', async () => {
     const document = load(FORM);
     snapshot();
     await moveCursor(0);
     assert.ok(document.querySelector('[data-jev-voice]'));
     clearMarkers();
-    assert.equal(document.querySelectorAll('[data-jev-voice], #jev-voice-cursor, #jev-voice-target').length, 0);
+    assert.equal(document.querySelectorAll('[data-jev-voice]').length, 0);
+    assert.ok(document.getElementById('jev-voice-cursor'), 'the user still sees where the click landed');
+    assert.ok(document.getElementById('jev-voice-target'));
     assert.equal(document.getElementById('first').style.outline, '');
+  });
+
+  it('removes the marker and highlight on their own after the hide delay', async () => {
+    const document = load(FORM);
+    snapshot();
+    await moveCursor(0);
+    clearMarkers();
+    await new Promise((resolve) => setTimeout(resolve, 1200 + 260 + 50)); // reduced-motion hide delay plus fade
+    assert.equal(document.querySelectorAll('#jev-voice-cursor, #jev-voice-target').length, 0);
   });
 });
 
@@ -120,8 +139,9 @@ describe('clickElement', () => {
       e.preventDefault();
       clicked = true;
     });
-    assert.equal(clickElement(3), null);
+    assert.deepEqual(clickElement(3), { clicked: true });
     assert.ok(clicked);
+    assert.equal(clickElement(99), null, 'no marker, nothing clicked');
   });
 
   it('returns the URL of links that open a new tab instead of clicking', () => {

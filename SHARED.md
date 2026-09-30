@@ -3,7 +3,7 @@
 These files are copied from [jev-shared](https://github.com/dgr8akki/jev-shared) with `node scripts/sync-shared.js`. Do not edit them here: change them upstream, then re-sync. CI runs `node scripts/sync-shared.js --check` and fails when a copy differs from the pinned commit.
 
 - Upstream: https://github.com/dgr8akki/jev-shared
-- Commit: `06de669e5140eed70891a4187201563b3ec5bdd7`
+- Commit: `ed2a37ab2de60e53f603354a39088f158f20f1f6`
 
 | Upstream path                         | Local path                     | Note                                                     |
 | ------------------------------------- | ------------------------------ | -------------------------------------------------------- |

@@ -39,7 +39,15 @@ export function snapshot() {
     // aria-labelledby names other elements; their text is a label, not a value.
     const labelledBy = (el.getAttribute('aria-labelledby') ?? '')
       .split(/\s+/)
-      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .map((id) => document.getElementById(id))
+      // A label that is itself a field or an editor holds the user's words, not a name.
+      .filter(
+        (node) =>
+          node &&
+          !node.closest('[contenteditable]:not([contenteditable=false])') &&
+          !node.matches('input, textarea, select'),
+      )
+      .map((node) => node.textContent)
       .join(' ')
       .trim();
     // A field's content is the user's, so its label can only come from attributes
@@ -153,7 +161,10 @@ export async function moveCursor(index, kind = 'click') {
       cursor.style.transition = 'opacity 240ms ease';
       cursor.style.opacity = '0';
       // Gone once faded, so nothing of ours stays in the page's DOM.
-      setTimeout(() => cursor.isConnected && cursor.style.opacity === '0' && cursor.remove(), 260);
+      setTimeout(() => {
+        if (cursor.isConnected && cursor.style.opacity === '0') cursor.remove();
+        box.remove();
+      }, 260);
     },
     reduceMotion ? 1200 : 900,
   );
@@ -165,14 +176,12 @@ export async function moveCursor(index, kind = 'click') {
 }
 
 /**
- * Removes everything the extension put on the page: the index markers, the
- * cursor and the highlight box. Run after an action has completed.
+ * Removes the index markers once an action has run. The marker and its
+ * highlight stay for their own ~900 ms so the user sees where the action
+ * landed; their hide timer removes them from the page afterwards.
  */
 export function clearMarkers() {
   for (const el of document.querySelectorAll('[data-jev-voice]')) el.removeAttribute('data-jev-voice');
-  document.getElementById('jev-voice-cursor')?.jevRestore?.();
-  document.getElementById('jev-voice-cursor')?.remove();
-  document.getElementById('jev-voice-target')?.remove();
 }
 
 /**
@@ -182,7 +191,7 @@ export function clearMarkers() {
  * Only http(s) addresses are handed over: `tabs.create` refuses the rest.
  *
  * @param {number} index
- * @returns {{ newTab: string } | { blocked: string } | null}
+ * @returns {{ clicked: true } | { newTab: string } | { blocked: string } | null} null when the marker is gone.
  */
 export function clickElement(index) {
   const el = document.querySelector(`[data-jev-voice="${index}"]`);
@@ -194,7 +203,7 @@ export function clickElement(index) {
   }
   el.click();
   el.focus?.();
-  return null;
+  return { clicked: true };
 }
 
 /**

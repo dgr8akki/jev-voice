@@ -42,6 +42,7 @@ main {
 h2 {
   font-size: 1.25rem;
   line-height: 1.2;
+  overflow-wrap: anywhere; /* "Connected via Vercel AI Gateway" at 320 px and 200 % zoom */
 }
 
 .intro {
@@ -232,7 +233,8 @@ h2 {
 }
 
 .key-field {
-  flex: 1 1 240px;
+  flex: 1 1 min(240px, 100%);
+  min-width: 0;
   position: relative;
   display: flex;
   align-items: center;

@@ -74,6 +74,15 @@ const ordinal = (n) => {
   return `${n}${suffix}`;
 };
 
+/** Page text as it may travel to the provider: no quotes or line breaks, one line, at most LABEL_LIMIT characters. */
+export function cleanText(text) {
+  return String(text ?? '')
+    .replace(/["'`\u2018\u2019\u201c\u201d]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, LABEL_LIMIT);
+}
+
 /**
  * A snapshot label as Jev sees it. The page wrote the text, so it is cut to
  * a sentence, stripped of quotes and line breaks that could dress it up as an
@@ -86,11 +95,7 @@ const ordinal = (n) => {
 export function describeElement(label, index) {
   const colon = label.indexOf(': ');
   const kind = colon === -1 ? 'element' : label.slice(0, colon);
-  const text = (colon === -1 ? label : label.slice(colon + 2))
-    .replace(/["'`\u2018\u2019\u201c\u201d]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, LABEL_LIMIT);
+  const text = cleanText(colon === -1 ? label : label.slice(colon + 2));
   return `${ordinal(index + 1)} ${kind}: ${text || '(unlabeled)'}`;
 }
 

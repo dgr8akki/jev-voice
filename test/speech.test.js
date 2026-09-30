@@ -146,6 +146,20 @@ describe('createListener', () => {
     }
   });
 
+  it('ignores a second start while the first is still choosing a mode', async () => {
+    const { Recognition, instances } = fakeRecognition();
+    let settle;
+    Recognition.available = () => new Promise((resolve) => (settle = resolve));
+    const { listener, events } = listenerWith();
+    const first = listener.start();
+    const second = listener.start(); // a double click
+    settle('available');
+    await Promise.all([first, second]);
+    assert.equal(instances.length, 1, 'one recognizer');
+    assert.equal(instances[0].starts, 1, 'started once');
+    assert.equal(events.statuses.filter((s) => s.listening).length, 1);
+  });
+
   it('gives up after repeated restart failures and says so', async () => {
     const { instances } = fakeRecognition(['ok', 'throw', 'throw', 'throw', 'throw']);
     const { listener, events } = listenerWith({ restartDelayMs: 5, maxRestarts: 2 });

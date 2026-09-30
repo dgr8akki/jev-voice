@@ -4,7 +4,7 @@
  */
 
 import { createHandler } from './lib/handler.js';
-import { JevError, createJevClient } from './lib/jev.js';
+import { JevError, createJevClient, sessionPauseStore } from './lib/jev.js';
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 // Older Chrome refuses setAccessLevel on storage.local (sync throw or rejected
@@ -24,6 +24,8 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 const jev = createJevClient({
   getKey: async () => (await chrome.storage.local.get('apiKey')).apiKey ?? '',
   getProvider: async () => (await chrome.storage.local.get('provider')).provider,
+  // A 429 pause kept only in memory is forgotten when Chrome stops the idle worker; session storage is not.
+  pauseStore: sessionPauseStore(chrome.storage.session),
 });
 
 /** @type {import('./lib/handler.js').Browser} */

@@ -63,6 +63,7 @@ export function createListener(
 
   let recognition = null;
   let listening = false;
+  let starting = false; // between start() and the recognizer accepting; a second click in that window is ignored
   let mode = null;
   let session = 0;
   let lastWordCount = 0;
@@ -140,16 +141,21 @@ export function createListener(
 
   async function start() {
     if (unsupportedReason) return onError({ code: 'unsupported', message: unsupportedReason });
-    if (listening) return;
-    await chooseMode();
-    recognition ??= build();
+    if (listening || starting) return;
+    starting = true;
     try {
-      recognition.start();
-    } catch {
-      return onError({ code: 'start-failed', message: ERROR_MESSAGES['start-failed'] });
+      await chooseMode();
+      recognition ??= build();
+      try {
+        recognition.start();
+      } catch {
+        return onError({ code: 'start-failed', message: ERROR_MESSAGES['start-failed'] });
+      }
+      listening = true;
+      onStatus({ listening, mode });
+    } finally {
+      starting = false;
     }
-    listening = true;
-    onStatus({ listening, mode });
   }
 
   function stop() {

@@ -13,8 +13,9 @@
  * Status lines get `data-tone` (busy, ok, error, neutral); a page can either
  * style the tone in CSS alone or provide `<template data-icon="ok">` elements
  * whose content is cloned in front of the text, so no status relies on colour.
- * Focus moves with the UI: to Test after Connect, to Replace after Cancel and
- * to the key field after Remove, so keyboard users are never left on <body>.
+ * Focus moves with the UI: to Test after Connect, back to the key field after
+ * a failed check, to Replace after Cancel and to the key field after Remove,
+ * so keyboard users are never left on <body>.
  */
 
 import { DEFAULT_PROVIDER, JevError, PROVIDERS, createJevClient, maskKey } from '../lib/jev.js';
@@ -168,7 +169,9 @@ form.addEventListener('submit', async (event) => {
   setBusy(submit, false, 'Connect');
   if (!result.ok) {
     setInvalid(result.invalid);
-    return setStatus(formStatus, result.message, 'error');
+    setStatus(formStatus, result.message, 'error');
+    // Disabling the focused Connect button dropped focus on body; the field is what the user has to fix.
+    return input.focus({ preventScroll: true });
   }
   apiKey = key;
   provider = id;
