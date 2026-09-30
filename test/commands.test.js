@@ -5,6 +5,7 @@ import {
   ACTIONS,
   SITES,
   buildQuestions,
+  localCommand,
   navigationUrl,
   searchQuery,
   spokenDomain,
@@ -86,6 +87,64 @@ describe('toCommand', () => {
       assert.equal(partial({ action: 'navigate' }), null);
       assert.equal(partial({ action: 'navigate', site: 'github' }).site, 'github');
     });
+  });
+});
+
+describe('localCommand', () => {
+  const local = (text, final = true) => localCommand(text, { final });
+
+  it('recognises page, history and tab commands without Jev', () => {
+    const cases = [
+      ['scroll down', 'scroll_down'],
+      ['Scroll down a bit', 'scroll_down'],
+      ['scroll up', 'scroll_up'],
+      ['go back', 'back'],
+      ['back', 'back'],
+      ['go forward', 'forward'],
+      ['reload', 'reload'],
+      ['refresh the page', 'reload'],
+      ['new tab', 'new_tab'],
+      ['open a new tab', 'new_tab'],
+      ['next tab', 'next_tab'],
+      ['previous tab', 'prev_tab'],
+      ['close this tab', 'close_tab'],
+      ['close the tab', 'close_tab'],
+    ];
+    for (const [said, action] of cases) assert.equal(local(said)?.action, action, said);
+  });
+
+  it('opens known sites and spoken domains', () => {
+    assert.deepEqual(local('go to wikipedia'), { action: 'navigate', target: null, site: 'wikipedia' });
+    assert.equal(local('open hacker news').site, 'hackernews');
+    assert.equal(local('go to facebook dot com').action, 'navigate');
+    assert.equal(local('open Facebook.com').site, null);
+  });
+
+  it('leaves anything that needs the page or the model to Jev', () => {
+    for (const said of [
+      'go to',
+      'go to the verge',
+      'open the britannica one',
+      'open the pricing link',
+      'click the first result',
+      'search for alan turing',
+      'type hello in the email field',
+      'surname Pahuja',
+      'scroll to the bottom',
+      'go back to the list please and',
+      'um yeah so anyway',
+      '',
+    ]) {
+      assert.equal(local(said), null, said);
+    }
+  });
+
+  it('acts on a partial only when the words cannot still be growing into something else', () => {
+    assert.equal(local('scroll down', false)?.action, 'scroll_down');
+    assert.equal(local('go to youtube', false)?.site, 'youtube');
+    // "x" may be the start of "xkcd"; a one-letter site name waits for the final transcript.
+    assert.equal(local('go to x', false), null);
+    assert.equal(local('go to x', true)?.site, 'x');
   });
 });
 

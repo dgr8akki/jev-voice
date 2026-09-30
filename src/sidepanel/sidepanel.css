@@ -8,6 +8,23 @@ body {
   padding: 2px 14px 16px;
 }
 
+/* Shown until a key is connected */
+
+.banner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--jv-radius-lg);
+  background: var(--jv-surface);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+
+.banner .btn {
+  align-self: flex-start;
+}
+
 /* Top bar */
 
 .topbar {

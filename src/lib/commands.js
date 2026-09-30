@@ -128,6 +128,46 @@ export function toCommand(answers, { final }) {
   return { action, target, site };
 }
 
+/** Spoken forms of the commands that need neither the page nor Jev. Anchored, so "go back to the list" falls through. */
+const LOCAL = [
+  [/^scroll\s+down\b/, 'scroll_down'],
+  [/^scroll\s+up\b/, 'scroll_up'],
+  [/^(?:go\s+)?back$/, 'back'],
+  [/^(?:go\s+)?forward$/, 'forward'],
+  [/^(?:reload|refresh)(?:\s+(?:the\s+)?page)?$/, 'reload'],
+  [/^(?:open\s+(?:a\s+)?)?new\s+tab$/, 'new_tab'],
+  [/^next\s+tab$/, 'next_tab'],
+  [/^(?:previous|prev|last)\s+tab$/, 'prev_tab'],
+  [/^close\s+(?:(?:this|the|current)\s+)?tab$/, 'close_tab'],
+];
+const GO = /^(?:go\s+to|open|visit|navigate\s+to)\s+(.+)$/;
+
+/**
+ * The command a transcript spells out on its own, or `null` when it takes the
+ * page or Jev to know. Scroll, history, tabs, and "open" followed by a known
+ * site or a spoken domain: enough to be useful before a key is connected.
+ *
+ * @param {string} text
+ * @param {{ final?: boolean }} [context]
+ * @returns {Command | null}
+ */
+export function localCommand(text, { final = true } = {}) {
+  const said = text
+    .trim()
+    .toLowerCase()
+    .replace(/[.,!?]+$/, '');
+  for (const [pattern, action] of LOCAL) if (pattern.test(said)) return { action, target: null, site: null };
+
+  const name = said.match(GO)?.[1];
+  if (!name) return null;
+  if (spokenDomain(name) === name.replace(/\s+dot\s+/g, '.')) return { action: 'navigate', target: null, site: null };
+  const site = name.replace(/\s+/g, '');
+  if (!SITES[site]) return null;
+  // A one-letter site name ("x") can be the first letter of a longer word while the sentence is still coming.
+  if (!final && site.length < 3) return null;
+  return { action: 'navigate', target: null, site };
+}
+
 /**
  * A domain spoken outright ("facebook.com", "facebook dot com"), lowercased.
  *

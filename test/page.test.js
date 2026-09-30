@@ -57,6 +57,28 @@ describe('snapshot', () => {
     load(`<div>${'<button>Go</button>'.repeat(150)}</div>`);
     assert.equal(snapshot().length, 100);
   });
+
+  it('never uses what the user typed as a label', () => {
+    load(`<input value="hunter2" /><textarea>my private notes</textarea>`);
+    assert.deepEqual(snapshot(), ['field: (unlabeled)', 'field: (unlabeled)']);
+  });
+
+  it('leaves password fields out entirely', () => {
+    load(`<label for="pw">Password</label><input id="pw" type="password" value="hunter2" /><button>Log in</button>`);
+    const labels = snapshot();
+    assert.deepEqual(labels, ['button: Log in']);
+    assert.ok(!labels.join(' ').includes('hunter2'));
+  });
+
+  it('labels editors from their attributes, never their text', () => {
+    load(`<div contenteditable="true" aria-label="Message">secret draft</div>
+      <div contenteditable="true" data-placeholder="Write a reply">another secret</div>
+      <div contenteditable="true">just a draft</div>
+      <select name="country"><option>Ireland</option></select>`);
+    const labels = snapshot();
+    assert.deepEqual(labels, ['field: Message', 'field: Write a reply', 'field: (unlabeled)', 'field: country']);
+    assert.ok(!labels.join(' ').includes('secret'));
+  });
 });
 
 describe('clickElement', () => {

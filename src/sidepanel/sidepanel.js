@@ -10,8 +10,6 @@ import { createListener } from '../lib/speech.js';
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVITY = 30;
 
-let connected = false;
-
 // ---------------------------------------------------------------------------
 // Live line: what the recognizer heard, word by word
 
@@ -19,6 +17,11 @@ let connected = false;
 let heard = null;
 let fired = { id: null, words: 0 };
 
+/**
+ * The visible line is not a live region: it changes on every word, which a
+ * screen reader would read as the whole sentence again each time. The final
+ * phrase is announced once, from a hidden status line.
+ */
 function renderHeard() {
   $('heard').replaceChildren();
   if (!heard) return;
@@ -29,8 +32,11 @@ function renderHeard() {
     span.textContent = word;
     if (i < firedWords) span.className = 'fired';
     else if (!heard.final && i === words.length - 1) span.className = 'partial';
+    // Spacing is CSS gap; without a real space the accessible name reads "gotowikipedia".
+    if (i) $('heard').append(' ');
     $('heard').append(span);
   });
+  if (heard.final) $('heard-final').textContent = `Heard: ${heard.text}`;
 }
 
 /** @param {string} text @param {'mode' | 'problem'} [kind] */
@@ -132,10 +138,10 @@ const listener = createListener({
   },
 });
 
-/** Mic states: idle, listening, off (no key, or no speech recognition) and error (blocked). */
+/** Mic states: idle, listening, off (no speech recognition) and error (blocked). No key still means idle. */
 function renderMic() {
   const listening = listener.listening;
-  const state = listening ? 'listening' : !listener.supported || !connected ? 'off' : micBlocked ? 'error' : 'idle';
+  const state = listening ? 'listening' : !listener.supported ? 'off' : micBlocked ? 'error' : 'idle';
   const mic = $('mic');
   mic.dataset.state = state;
   mic.toggleAttribute('data-slash', !listener.supported);
@@ -148,7 +154,6 @@ function renderMic() {
 }
 
 $('mic').addEventListener('click', () => {
-  if (!connected) return toggleSettings(true);
   if (listener.listening) listener.stop();
   else listener.start();
 });
@@ -162,12 +167,13 @@ if (!listener.supported) {
 // ---------------------------------------------------------------------------
 // Settings
 
-connected = await mountConnection($('connection'), $('open-settings'), (isConnected) => {
-  connected = isConnected;
+// Without a key the panel still scrolls, navigates and manages tabs; the banner says what a key adds.
+await mountConnection($('connection'), $('open-settings'), (isConnected) => {
   $('settings').dataset.connected = String(isConnected);
-  if (!isConnected) toggleSettings(true);
-  renderMic();
+  $('connect-banner').hidden = isConnected;
 });
+$('connect-banner-button').addEventListener('click', () => chrome.runtime.openOptionsPage());
+renderMic();
 
 $('settings-toggle').addEventListener('click', () => toggleSettings());
 

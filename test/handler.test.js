@@ -64,8 +64,8 @@ function jevAnswering(main, text) {
   });
 }
 
-const run = async ({ said, final = true, id = said, jev, browser = fakeBrowser() }) => {
-  const handle = createHandler({ jev, browser, now: () => 0 });
+const run = async ({ said, final = true, id = said, jev, browser = fakeBrowser(), hasKey }) => {
+  const handle = createHandler({ jev, browser, now: () => 0, hasKey });
   return { outcome: await handle({ text: said, final, id }), browser, jev, handle };
 };
 
@@ -73,12 +73,45 @@ const withoutSnapshot = (calls) => calls.filter(([name]) => name !== 'snapshot')
 
 describe('createHandler', () => {
   it('sends the page and its elements to Jev', async () => {
-    const { jev } = await run({ said: 'scroll down', jev: jevAnswering({ action: 'scroll_down' }) });
+    const { jev } = await run({ said: 'click the first result', jev: jevAnswering({ action: 'click', target: 'e1' }) });
     assert.deepEqual(jev.calls[0].state, {
-      transcript: 'scroll down',
+      transcript: 'click the first result',
       page: { url: 'https://www.google.com/search?q=turing', title: 'turing' },
       elements: ELEMENTS,
     });
+  });
+
+  it('runs deterministic commands locally, with no snapshot and no Jev call', async () => {
+    const jev = fakeJev(() => {
+      throw new Error('Jev must not be called');
+    });
+    const cases = [
+      ['scroll down', ['scrollPage', 1], 'Scrolled down'],
+      ['go back', ['back', 7], 'Went back'],
+      ['go to wikipedia', ['navigate', 7, 'https://en.wikipedia.org'], 'Opened https://en.wikipedia.org'],
+      ['open facebook dot com', ['navigate', 7, 'https://facebook.com'], 'Opened https://facebook.com'],
+      ['close this tab', ['closeTab', 7], 'Closed the tab'],
+    ];
+    for (const [said, call, did] of cases) {
+      const { outcome, browser } = await run({ said, jev, hasKey: async () => false });
+      assert.deepEqual(browser.calls, [call], said);
+      assert.equal(outcome.did, did, said);
+    }
+    assert.equal(jev.calls.length, 0);
+  });
+
+  it('asks for a key on the first command that needs Jev, and only on the final transcript', async () => {
+    const jev = fakeJev(() => {
+      throw new Error('Jev must not be called');
+    });
+    const partial = await run({ said: 'click the', final: false, jev, hasKey: async () => false });
+    assert.deepEqual(partial.outcome, {});
+    const { outcome, browser } = await run({ said: 'click the first result', jev, hasKey: async () => false });
+    assert.equal(outcome.did, 'Connect Jev to click, type and search by voice');
+    assert.equal(outcome.miss, true);
+    assert.equal(outcome.needsKey, true);
+    assert.deepEqual(browser.calls, [], 'no snapshot without a key');
+    assert.equal(jev.calls.length, 0);
   });
 
   it('opens a known site', async () => {
@@ -194,15 +227,16 @@ describe('createHandler', () => {
 
   it('still works on pages it cannot script', async () => {
     const browser = fakeBrowser({ elements: new Error('Cannot access a chrome:// URL') });
-    const { outcome, jev } = await run({ said: 'go back', browser, jev: jevAnswering({ action: 'back' }) });
-    assert.equal(outcome.did, 'Went back');
+    const { outcome, jev } = await run({ said: 'search for turing', browser, jev: jevAnswering({ action: 'search' }) });
+    assert.equal(outcome.did, 'Searched for "turing"');
     assert.deepEqual(jev.calls[0].state.elements, []);
   });
 
   it('waits on an incomplete partial and acts once per utterance', async () => {
     const browser = fakeBrowser();
-    const handle = createHandler({ jev: jevAnswering({ action: 'back', complete: 0.2 }), browser, now: () => 0 });
-    assert.deepEqual(await handle({ text: 'go back', final: false, id: 'u1' }), {});
+    const hesitant = jevAnswering({ action: 'click', target: 'e1', complete: 0.2 });
+    const handle = createHandler({ jev: hesitant, browser, now: () => 0 });
+    assert.deepEqual(await handle({ text: 'click the first', final: false, id: 'u1' }), {});
 
     const eager = createHandler({ jev: jevAnswering({ action: 'back' }), browser, now: () => 0 });
     assert.deepEqual(await eager({ text: 'go back', final: false, id: 'u2' }), {

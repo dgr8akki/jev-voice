@@ -51,11 +51,17 @@ const browser = {
   },
 };
 
-const handle = createHandler({ jev, browser });
+const handle = createHandler({
+  jev,
+  browser,
+  hasKey: async () => Boolean((await chrome.storage.local.get('apiKey')).apiKey),
+});
 
 chrome.runtime.onMessage.addListener((message, _sender, reply) => {
   if (message?.type !== 'transcript') return false;
   handle(message).then(reply, (error) => {
+    // Anything that is not a JevError is a bug or an API change; the generic line hides it, so log it.
+    if (!(error instanceof JevError)) console.error('Jev Voice: command failed', error);
     // Partials are speculative: only a final transcript is worth an error line.
     const text = error instanceof JevError ? error.message : 'Something went wrong. Try again.';
     reply(message.final ? { error: text } : {});

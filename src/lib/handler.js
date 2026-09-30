@@ -7,7 +7,15 @@
  * @module lib/handler
  */
 
-import { buildQuestions, navigationUrl, searchQuery, textCandidates, textQuestion, toCommand } from './commands.js';
+import {
+  buildQuestions,
+  localCommand,
+  navigationUrl,
+  searchQuery,
+  textCandidates,
+  textQuestion,
+  toCommand,
+} from './commands.js';
 import { clearLastTyped, clickElement, moveCursor, scrollPage, snapshot, typeInto } from './page.js';
 
 /**
@@ -29,6 +37,7 @@ import { clearLastTyped, clickElement, moveCursor, scrollPage, snapshot, typeInt
  * @property {number} [ms] Time from transcript to action.
  * @property {boolean} [early] Acted on a partial transcript.
  * @property {boolean} [miss] Understood, but nothing on the page to act on, or a question back.
+ * @property {boolean} [needsKey] The command needs Jev and no key is connected yet.
  */
 
 /** Outcomes that didn't act; the side panel shows them as a miss, not a success. */
@@ -37,13 +46,18 @@ const MISS = {
   noText: "Didn't catch what to type",
   whichField: 'Which field should it go in?',
   nothingTyped: 'Nothing has been typed on this page yet',
+  needsKey: 'Connect Jev to click, type and search by voice',
 };
 const MISSES = new Set(Object.values(MISS));
 
 /**
- * @param {{ jev: import('./jev.js').JevClient, browser: Browser, now?: () => number }} deps
+ * @param {object} deps
+ * @param {import('./jev.js').JevClient} deps.jev
+ * @param {Browser} deps.browser
+ * @param {() => number} [deps.now]
+ * @param {() => boolean | Promise<boolean>} [deps.hasKey] Whether Jev can be called at all.
  */
-export function createHandler({ jev, browser, now = () => performance.now() }) {
+export function createHandler({ jev, browser, now = () => performance.now(), hasKey = () => true }) {
   /** Utterance ids already acted on. Partials race each other; the first confident answer wins. */
   const acted = new Set();
 
@@ -54,15 +68,22 @@ export function createHandler({ jev, browser, now = () => performance.now() }) {
   return async function handle({ text, final, id }) {
     if (acted.has(id)) return {};
     const started = now();
-    const tab = await browser.activeTab();
-    // chrome:// and Web Store pages can't be scripted; commands that don't need the page still work.
-    const elements = (await browser.run(tab.id, snapshot).catch(() => null)) ?? [];
+    // Scroll, history, tabs and "open <site>" are decided here, so they work before a key is connected.
+    const local = localCommand(text, { final });
+    if (!local && !(await hasKey())) return final ? { did: MISS.needsKey, miss: true, needsKey: true } : {};
 
-    const answers = await jev.evaluate({
-      state: { transcript: text, page: { url: tab.url, title: tab.title }, elements },
-      questions: buildQuestions({ elements, final }),
-    });
-    const command = toCommand(answers, { final });
+    const tab = await browser.activeTab();
+    let command = local;
+    let elements = [];
+    if (!command) {
+      // chrome:// and Web Store pages can't be scripted; commands that don't need the page still work.
+      elements = (await browser.run(tab.id, snapshot).catch(() => null)) ?? [];
+      const answers = await jev.evaluate({
+        state: { transcript: text, page: { url: tab.url, title: tab.title }, elements },
+        questions: buildQuestions({ elements, final }),
+      });
+      command = toCommand(answers, { final });
+    }
     if (!command || acted.has(id)) return {};
     acted.add(id);
 

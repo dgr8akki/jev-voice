@@ -4,7 +4,7 @@
  * badge with Test, Replace and Remove.
  */
 
-import { DEFAULT_PROVIDER, PROVIDERS, createJevClient, maskKey } from '../lib/jev.js';
+import { DEFAULT_PROVIDER, JevError, PROVIDERS, createJevClient, maskKey } from '../lib/jev.js';
 
 /** Setup steps per provider. Trusted constants, so innerHTML is fine. */
 const link = (href, text) => `<a href="${href}" target="_blank" rel="noreferrer">${text}</a>`;
@@ -63,19 +63,26 @@ radios.forEach((radio) =>
   }),
 );
 
-/** Resolves with an error message, or '' when the key works. */
+/** Resolves with a JevError, or null when the key works. */
 async function test(id, key) {
   try {
-    await createJevClient({ getKey: () => key, getProvider: () => id }).evaluate({
+    const answers = await createJevClient({ getKey: () => key, getProvider: () => id }).evaluate({
       state: 'ping',
       questions: {
         ok: { type: 'choice', instructions: 'Is this a test message?', criteria: { yes: 'Yes', no: 'No' } },
       },
     });
-    return '';
+    // The client checks that every question got an answer; a key check also needs that answer to be a pick.
+    if (typeof answers.ok?.choice !== 'string') {
+      return new JevError(`Unexpected reply from ${PROVIDERS[id].host}.`, { status: 200 });
+    }
+    return null;
   } catch (error) {
     // A busy provider still accepted the key.
-    return error.busy ? '' : error.message;
+    if (error.busy) return null;
+    if (error instanceof JevError) return error;
+    console.error('Jev Voice: key check failed', error);
+    return new JevError('Something went wrong. Try again.');
   }
 }
 
@@ -96,25 +103,31 @@ form.addEventListener('submit', async (event) => {
   const error = await test(id, key);
   button.disabled = false;
   if (error) {
-    input.setAttribute('aria-invalid', 'true');
-    return setStatus(formStatus, error, 'error');
+    // Only a provider verdict says anything about the key; offline or a garbled reply does not.
+    if (error.status >= 400) input.setAttribute('aria-invalid', 'true');
+    return setStatus(formStatus, error.message, 'error');
   }
   apiKey = key;
   provider = id;
   await chrome.storage.local.set({ apiKey, provider });
   setStatus(formStatus, '');
   render();
+  // The form (and the button that had focus) is gone; land on the card's heading, not <body>.
+  document.getElementById('connected-title').focus();
   setStatus(connectedStatus, `Key works. ${document.body.dataset.next}`, 'ok');
 });
 
 document.getElementById('test').addEventListener('click', async () => {
   setStatus(connectedStatus, 'Checking key…', 'progress');
   const error = await test(provider, apiKey);
-  setStatus(connectedStatus, error || 'Key works.', error ? 'error' : 'ok');
+  setStatus(connectedStatus, error ? error.message : 'Key works.', error ? 'error' : 'ok');
 });
 
 document.getElementById('replace').addEventListener('click', () => render(true));
-cancel.addEventListener('click', () => render());
+cancel.addEventListener('click', () => {
+  render();
+  document.getElementById('replace').focus();
+});
 
 document.getElementById('remove').addEventListener('click', async () => {
   await chrome.storage.local.remove('apiKey');

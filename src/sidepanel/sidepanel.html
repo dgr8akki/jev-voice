@@ -40,6 +40,14 @@
       </div>
     </section>
 
+    <div id="connect-banner" class="banner" hidden>
+      <p>
+        Connect Jev to click links, fill forms and search by voice. Scrolling, tabs and opening sites by name already
+        work.
+      </p>
+      <button id="connect-banner-button" type="button" class="btn btn-primary">Connect</button>
+    </div>
+
     <div class="input-block">
       <button id="mic" type="button" class="mic" data-state="idle" aria-pressed="false">
         <span class="mic-disc">
@@ -54,7 +62,8 @@
       </button>
 
       <div class="live">
-        <p id="heard" class="heard" aria-live="polite"></p>
+        <p id="heard" class="heard"></p>
+        <p id="heard-final" class="visually-hidden" role="status"></p>
         <p id="notice" class="notice" aria-live="polite"></p>
         <div class="rule"></div>
       </div>

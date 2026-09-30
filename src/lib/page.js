@@ -25,7 +25,7 @@ export function snapshot() {
   for (const el of document.querySelectorAll(`[${ATTR}]`)) el.removeAttribute(ATTR);
 
   const selector =
-    'a[href], button, input:not([type=hidden]), textarea, select, [role=button], [role=link], [role=tab], [role=menuitem], [contenteditable=true]';
+    'a[href], button, input:not([type=hidden]):not([type=password]), textarea, select, [role=button], [role=link], [role=tab], [role=menuitem], [contenteditable=true]';
   const visible = [...document.querySelectorAll(selector)].filter((el) => {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight;
@@ -33,20 +33,23 @@ export function snapshot() {
 
   return visible.slice(0, LIMIT).map((el, i) => {
     el.setAttribute(ATTR, String(i));
-    const kind = el.matches('input, textarea, select, [contenteditable=true]')
-      ? 'field'
-      : el.matches('a, [role=link]')
-        ? 'link'
-        : 'button';
-    const text =
-      el.getAttribute('aria-label') ||
-      el.labels?.[0]?.textContent ||
-      (el.innerText ?? el.textContent) ||
-      el.getAttribute('placeholder') ||
-      el.value ||
-      el.getAttribute('title') ||
-      el.querySelector('img')?.getAttribute('alt') ||
-      '';
+    const field = el.matches('input, textarea, select, [contenteditable=true]');
+    const kind = field ? 'field' : el.matches('a, [role=link]') ? 'link' : 'button';
+    // A field's content is the user's, so its label can only come from attributes
+    // and its <label>: never value, never the text inside an editor or a select.
+    const text = field
+      ? el.getAttribute('aria-label') ||
+        el.labels?.[0]?.textContent ||
+        el.getAttribute('placeholder') ||
+        el.getAttribute('data-placeholder') ||
+        el.getAttribute('title') ||
+        el.getAttribute('name') ||
+        ''
+      : el.getAttribute('aria-label') ||
+        (el.innerText ?? el.textContent) ||
+        el.getAttribute('title') ||
+        el.querySelector('img')?.getAttribute('alt') ||
+        '';
     return `${kind}: ${text.replace(/\s+/g, ' ').trim().slice(0, 80) || '(unlabeled)'}`;
   });
 }
