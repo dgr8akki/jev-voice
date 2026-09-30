@@ -1,4 +1,4 @@
-/* Jev Voice "Cue" tokens and shared controls, on the Nocturne palette.
+/* Jev Voice design tokens (--jv-*, light and dark) and shared controls.
    Used by the side panel, settings and permission pages. */
 
 @font-face {
@@ -166,7 +166,7 @@ svg {
   color: var(--jv-muted);
 }
 
-/* Brand mark: the cue (a dot for your voice, a tick for the action). */
+/* Icon mark: a dot for your voice, a tick for the action. */
 .mark {
   display: grid;
   place-items: center;

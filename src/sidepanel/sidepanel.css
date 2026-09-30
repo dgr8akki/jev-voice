@@ -1,6 +1,5 @@
-/* Jev Voice side panel, "Cue".
-   Glance order: status dot and mic (is it listening), the live line (what did
-   it hear), the last-action card (what did it just do). */
+/* Jev Voice side panel. Top to bottom: status dot and mic (is it listening),
+   the live line (what did it hear), the last-action card (what did it just do). */
 
 body {
   display: flex;
@@ -490,7 +489,7 @@ li[data-kind='ignored'] .outcome {
   font-variant-numeric: tabular-nums;
 }
 
-.cue-tag {
+.early-tag {
   display: none;
 }
 
@@ -549,7 +548,7 @@ li:first-child .tail .early-text {
   display: none;
 }
 
-li:first-child[data-early] .cue-tag {
+li:first-child[data-early] .early-tag {
   justify-self: start;
   display: inline-flex;
   align-items: center;

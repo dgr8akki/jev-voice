@@ -7,7 +7,14 @@ import { createHandler } from './lib/handler.js';
 import { JevError, createJevClient } from './lib/jev.js';
 
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' });
+// Older Chrome refuses setAccessLevel on storage.local (sync throw or rejected
+// promise). Uncaught, that kills the worker before onMessage registers below.
+try {
+  chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_CONTEXTS' })?.catch?.(() => {});
+} catch {
+  // No content scripts in this extension, and the functions it injects never
+  // touch storage, so nothing untrusted reads the key without the lock either.
+}
 
 // First install: open settings in a tab to pick a provider and connect a key.
 chrome.runtime.onInstalled.addListener(({ reason }) => {

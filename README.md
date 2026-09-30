@@ -24,7 +24,7 @@
 - **Acts before you finish.** Commands such as "go back" or "scroll down" run as soon as they're unambiguous, often mid-sentence.
 - **Fills in forms.** Picks the right field from its label, types the right words, and submits when you say "and press enter".
 - **Takes corrections.** "No, that's the first name, not the surname" moves what it just typed.
-- **Shows what it's doing.** A cue mark glides beside the element and outlines it before clicking or typing, and the side panel underlines the words an early action fired on.
+- **Shows what it's doing.** A marker glides beside the element and outlines it before clicking or typing, and the side panel underlines the words an early action fired on.
 - **Private by default.** On-device speech recognition where Chrome supports it. No accounts, no analytics.
 
 ## How it works

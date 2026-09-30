@@ -30,4 +30,15 @@ describe('manifest', () => {
   it('keeps the store description within 132 characters', () => {
     assert.ok(manifest.description.length <= 132, `${manifest.description.length} chars`);
   });
+
+  it('only calls storage.setAccessLevel inside a try block below Chrome 140', () => {
+    // Older Chrome exposes setAccessLevel on storage.local but throws for that
+    // area, so `?.` is no guard. An uncaught throw at the top of the service
+    // worker means onMessage never registers and every command fails with
+    // "The extension restarted". Only a try/catch around the call counts.
+    const background = readFileSync(new URL(manifest.background.service_worker, src), 'utf8');
+    if (Number(manifest.minimum_chrome_version) >= 140) return;
+    const outsideTry = background.replace(/try\s*\{[\s\S]*?\}\s*catch\b/g, '');
+    assert.doesNotMatch(outsideTry, /setAccessLevel(\?\.)?\(/, 'wrap setAccessLevel in try/catch');
+  });
 });

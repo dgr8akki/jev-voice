@@ -14,6 +14,9 @@
  * Lists the interactive elements visible in the viewport, top to bottom, as
  * short labels such as "link: Pricing" or "field: Email address".
  *
+ * Labels only: no field values, no page text. PRIVACY.md promises exactly
+ * this, so change it too if this ever sends more.
+ *
  * @returns {string[]}
  */
 export function snapshot() {
@@ -49,10 +52,8 @@ export function snapshot() {
 }
 
 /**
- * Glides the cue mark (a ring and tick) beside an element and outlines it.
- * Extensions can't move the real pointer, so this shows the user what is about
- * to be clicked or typed into. Every stroke is keylined (light over a dark
- * halo) so it reads on any page.
+ * Glides the ring-and-tick marker beside an element and outlines it; strokes
+ * are keylined (light over a dark halo) so it shows on dark pages too.
  *
  * @param {number} index
  * @param {'click' | 'type'} [kind] Click lands past the lower-right corner with
