@@ -88,8 +88,9 @@ describe('createHandler', () => {
     const cases = [
       ['scroll down', ['scrollPage', 1], 'Scrolled down'],
       ['go back', ['back', 7], 'Went back'],
-      ['go to wikipedia', ['navigate', 7, 'https://en.wikipedia.org'], 'Opened https://en.wikipedia.org'],
-      ['open facebook dot com', ['navigate', 7, 'https://facebook.com'], 'Opened https://facebook.com'],
+      ['go to wikipedia', ['navigate', 7, 'https://en.wikipedia.org'], 'Opened en.wikipedia.org'],
+      ['open facebook dot com', ['navigate', 7, 'https://facebook.com'], 'Opened facebook.com'],
+      ['open google', ['navigate', 7, 'https://www.google.com'], 'Opened google.com'],
       ['close this tab', ['closeTab', 7], 'Closed the tab'],
     ];
     for (const [said, call, did] of cases) {
@@ -107,7 +108,7 @@ describe('createHandler', () => {
     const partial = await run({ said: 'click the', final: false, jev, hasKey: async () => false });
     assert.deepEqual(partial.outcome, {});
     const { outcome, browser } = await run({ said: 'click the first result', jev, hasKey: async () => false });
-    assert.equal(outcome.did, 'Connect Jev to click, type and search by voice');
+    assert.equal(outcome.did, 'Connect Jev to click links, fill forms and search by voice');
     assert.equal(outcome.miss, true);
     assert.equal(outcome.needsKey, true);
     assert.deepEqual(browser.calls, [], 'no snapshot without a key');
@@ -120,7 +121,7 @@ describe('createHandler', () => {
       jev: jevAnswering({ action: 'navigate', site: 'wikipedia' }),
     });
     assert.deepEqual(withoutSnapshot(browser.calls), [['navigate', 7, 'https://en.wikipedia.org']]);
-    assert.equal(outcome.did, 'Opened https://en.wikipedia.org');
+    assert.equal(outcome.did, 'Opened en.wikipedia.org');
   });
 
   it('opens a spoken domain directly', async () => {
@@ -134,7 +135,7 @@ describe('createHandler', () => {
     assert.equal(outcome.miss, false);
   });
 
-  it('moves the cursor, then clicks the element Jev picked', async () => {
+  it('moves the cursor, clicks the element Jev picked, then cleans up after itself', async () => {
     const { outcome, browser } = await run({
       said: 'open the britannica one',
       jev: jevAnswering({ action: 'click', target: 'e2' }),
@@ -142,14 +143,54 @@ describe('createHandler', () => {
     assert.deepEqual(withoutSnapshot(browser.calls), [
       ['moveCursor', 2, 'click'],
       ['clickElement', 2],
+      ['clearMarkers'],
     ]);
     assert.equal(outcome.did, 'Clicked link: Britannica');
   });
 
   it('opens new-tab links itself so they are not blocked as pop-ups', async () => {
-    const browser = fakeBrowser({ injected: { clickElement: 'https://en.wikipedia.org/wiki/Alan_Turing' } });
+    const browser = fakeBrowser({
+      injected: { clickElement: { newTab: 'https://en.wikipedia.org/wiki/Alan_Turing' } },
+    });
     await run({ said: 'click the first result', browser, jev: jevAnswering({ action: 'click', target: 'e1' }) });
-    assert.deepEqual(browser.calls.at(-1), ['openTab', 'https://en.wikipedia.org/wiki/Alan_Turing']);
+    assert.deepEqual(withoutSnapshot(browser.calls), [
+      ['moveCursor', 1, 'click'],
+      ['clickElement', 1],
+      ['openTab', 'https://en.wikipedia.org/wiki/Alan_Turing'],
+      ['clearMarkers'],
+    ]);
+  });
+
+  it('says so when a new-tab link is one Chrome will not open', async () => {
+    const browser = fakeBrowser({ injected: { clickElement: { blocked: 'javascript:' } } });
+    const { outcome } = await run({
+      said: 'click the first result',
+      browser,
+      jev: jevAnswering({ action: 'click', target: 'e1' }),
+    });
+    assert.equal(outcome.did, "That link opens a new tab in a way Chrome doesn't allow");
+    assert.equal(outcome.miss, true);
+    assert.ok(!browser.calls.some(([name]) => name === 'openTab'));
+  });
+
+  it('treats a target beyond the element list as no target', async () => {
+    const { outcome, browser } = await run({
+      said: 'click that',
+      jev: jevAnswering({ action: 'click', target: 'e99' }),
+    });
+    assert.equal(outcome.did, "Couldn't find that on the page");
+    assert.deepEqual(withoutSnapshot(browser.calls), []);
+  });
+
+  it('says it did not catch the text when the text answer is missing', async () => {
+    const jev = fakeJev((body) =>
+      'text' in body.questions
+        ? {}
+        : { action: choice('type'), target: choice('e4'), site: choice('other'), complete: yesNo(0.9) },
+    );
+    const { outcome, browser } = await run({ said: 'surname Pahuja', jev });
+    assert.equal(outcome.did, "Didn't catch what to type");
+    assert.deepEqual(withoutSnapshot(browser.calls), []);
   });
 
   it('says so when a click has no target', async () => {
@@ -165,6 +206,7 @@ describe('createHandler', () => {
     assert.deepEqual(withoutSnapshot(browser.calls), [
       ['moveCursor', 4, 'type'],
       ['typeInto', 4, 'Pahuja', false],
+      ['clearMarkers'],
     ]);
     assert.equal(outcome.did, 'Typed "Pahuja" into field: Surname');
     assert.deepEqual(Object.values(jev.calls[1].questions.text.criteria), [
@@ -191,6 +233,7 @@ describe('createHandler', () => {
       ['clearLastTyped'],
       ['moveCursor', 3, 'type'],
       ['typeInto', 3, 'Akash', false],
+      ['clearMarkers'],
     ]);
     assert.equal(outcome.did, 'Moved "Akash" to field: First name');
   });
@@ -220,16 +263,91 @@ describe('createHandler', () => {
     }
   });
 
+  it('snapshots once for the partials of an utterance and again for its final', async () => {
+    const browser = fakeBrowser();
+    const hesitant = jevAnswering({ action: 'click', target: 'e1', complete: 0.2 });
+    const handle = createHandler({ jev: hesitant, browser, now: () => 0 });
+    for (const text of ['click', 'click the', 'click the first']) await handle({ text, final: false, id: 'u1' });
+    const snapshots = () => browser.calls.filter(([name]) => name === 'snapshot').length;
+    assert.equal(snapshots(), 1, 'partials share one snapshot');
+    assert.equal(hesitant.calls.length, 3, 'but each partial still asks Jev');
+    await handle({ text: 'click the first result', final: true, id: 'u1' });
+    assert.equal(snapshots(), 2, 'the final looks at the page again');
+    await handle({ text: 'click', final: false, id: 'u2' });
+    assert.equal(snapshots(), 3, 'a new utterance starts fresh');
+  });
+
+  it('remembers the last fifty utterances it acted on, and forgets older ones', async () => {
+    const handle = createHandler({ jev: jevAnswering({ action: 'back' }), browser: fakeBrowser(), now: () => 0 });
+    await handle({ text: 'go back', final: false, id: 'first' });
+    assert.deepEqual(await handle({ text: 'go back', final: true, id: 'first' }), {}, 'still remembered');
+    for (let i = 0; i < 50; i += 1) await handle({ text: 'go back', final: true, id: `u${i}` });
+    assert.equal((await handle({ text: 'go back', final: true, id: 'first' })).did, 'Went back', 'evicted');
+    assert.deepEqual(await handle({ text: 'go back', final: true, id: 'u49' }), {}, 'recent ids are kept');
+  });
+
+  it('says there is nothing to go back or forward to, instead of "Something went wrong"', async () => {
+    const browser = fakeBrowser();
+    browser.back = async () => {
+      throw new Error('Cannot find a next page in history.');
+    };
+    browser.forward = browser.back;
+    const jev = jevAnswering({ action: 'none' });
+    await assert.rejects(run({ said: 'go back', browser, jev }), {
+      name: 'JevError',
+      message: 'Nothing to go back to.',
+    });
+    await assert.rejects(run({ said: 'go forward', browser, jev }), {
+      name: 'JevError',
+      message: 'Nothing to go forward to.',
+    });
+  });
+
   it('reports chatter as ignored', async () => {
     const { outcome } = await run({ said: 'um yeah so anyway', jev: jevAnswering({ action: 'none' }) });
     assert.equal(outcome.did, 'Ignored');
   });
 
-  it('still works on pages it cannot script', async () => {
-    const browser = fakeBrowser({ elements: new Error('Cannot access a chrome:// URL') });
-    const { outcome, jev } = await run({ said: 'search for turing', browser, jev: jevAnswering({ action: 'search' }) });
-    assert.equal(outcome.did, 'Searched for "turing"');
-    assert.deepEqual(jev.calls[0].state.elements, []);
+  describe('on a page Chrome will not let it script', () => {
+    const RESTRICTED = "Chrome doesn't let extensions see this page. Navigation and tab commands still work.";
+    const restricted = () => {
+      const browser = fakeBrowser();
+      browser.run = async (tabId, func) => {
+        browser.calls.push([func.name]);
+        throw new Error('Cannot access a chrome:// URL');
+      };
+      return browser;
+    };
+
+    it('still navigates and searches', async () => {
+      const { outcome, jev } = await run({
+        said: 'search for turing',
+        browser: restricted(),
+        jev: jevAnswering({ action: 'search' }),
+      });
+      assert.equal(outcome.did, 'Searched for "turing"');
+      assert.deepEqual(jev.calls[0].state.elements, []);
+    });
+
+    it('explains why a click cannot work instead of "Couldn\'t find that"', async () => {
+      await assert.rejects(
+        run({ said: 'click the pricing link', browser: restricted(), jev: jevAnswering({ action: 'click' }) }),
+        {
+          name: 'JevError',
+          message: RESTRICTED,
+        },
+      );
+    });
+
+    it('explains why scrolling cannot work instead of "Something went wrong"', async () => {
+      const jev = fakeJev(() => {
+        throw new Error('scroll is local');
+      });
+      await assert.rejects(run({ said: 'scroll down', browser: restricted(), jev }), {
+        name: 'JevError',
+        message: RESTRICTED,
+      });
+    });
   });
 
   it('waits on an incomplete partial and acts once per utterance', async () => {

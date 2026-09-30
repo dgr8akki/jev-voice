@@ -18,7 +18,7 @@
   --jv-raised: #cfd3e5;
   --jv-text: #292b31;
   --jv-muted: #595d6c;
-  --jv-subtle: #75798c; /* icons and dashed borders only */
+  --jv-subtle: #75798c; /* icons, dashed borders, and the edges of inputs and tiles (3.5:1 on the surface) */
   --jv-line: color-mix(in srgb, #292b31 18%, transparent);
   --jv-accent: #5d5294;
   --jv-accent-text: #5d5294;
@@ -89,7 +89,7 @@ body {
   margin: 0;
   background: var(--jv-bg);
   color: var(--jv-text);
-  font: 14px/1.5 var(--jv-font);
+  font: 0.875rem/1.5 var(--jv-font);
 }
 
 h1,
@@ -117,9 +117,16 @@ a:hover {
   color: var(--jv-text);
 }
 
+/* The "opens in a new tab" mark options.js puts after outbound links. */
+a .external {
+  display: inline;
+  margin-left: 2px;
+  vertical-align: -1px;
+}
+
 code {
   font-family: var(--jv-mono);
-  font-size: 12px;
+  font-size: 0.75rem;
 }
 
 :focus {
@@ -159,7 +166,7 @@ svg {
 }
 
 .kicker {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -189,13 +196,17 @@ svg {
   border-radius: var(--jv-radius-md);
   background: transparent;
   color: var(--jv-text);
-  font: 500 15px/1.2 var(--jv-font);
+  font: 500 0.9375rem/1.2 var(--jv-font);
   cursor: pointer;
   transition: background-color var(--jv-t-press) ease;
 }
 
+/* Disabled: still readable (Connect sits here for the whole key check), just plainly inert. */
 .btn:disabled {
-  opacity: 0.45;
+  color: var(--jv-muted);
+  border-color: var(--jv-line);
+  border-style: dashed;
+  background: transparent;
   cursor: not-allowed;
 }
 
@@ -245,12 +256,17 @@ svg {
   width: 100%;
   min-height: var(--jv-hit);
   padding: 6px 12px;
-  border: 1px solid var(--jv-line);
+  border: 1px solid var(--jv-subtle);
   border-radius: var(--jv-radius-md);
   background: var(--jv-surface);
   color: var(--jv-text);
   caret-color: var(--jv-accent);
-  font: 15px var(--jv-font);
+  font: 0.9375rem var(--jv-font);
+}
+
+.input::placeholder {
+  color: var(--jv-muted);
+  opacity: 1; /* Chrome dims placeholders to ~3.7:1 otherwise */
 }
 
 .input:hover {
@@ -269,13 +285,15 @@ svg {
   border-color: var(--jv-error);
 }
 
-/* Status lines always pair an icon with the text. The icon comes from the tone. */
+/* Status lines always pair an icon with the text. The icon comes from the tone:
+   either a class (permission page) drawn as a mask, or a data-tone with the
+   page's own <template data-icon> mark cloned in by options.js. */
 
 .status {
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--jv-muted);
   text-wrap: pretty;
 }
@@ -284,7 +302,7 @@ svg {
   display: none;
 }
 
-.status::before {
+.status:is(.ok, .error, .info, .progress)::before {
   content: '';
   flex: none;
   width: 18px;
@@ -312,8 +330,29 @@ svg {
   --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.9' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='8' opacity='.3'/%3E%3Cpath d='M12 4a8 8 0 0 1 8 8'/%3E%3C/svg%3E");
 }
 
+.status svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  stroke-width: 1.9;
+}
+
+.status[data-tone='ok'] {
+  color: var(--jv-accent-text);
+}
+
+.status[data-tone='error'] {
+  color: var(--jv-error);
+}
+
+.btn .spin {
+  width: 16px;
+  height: 16px;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .status.progress::before {
+  .status.progress::before,
+  .spin {
     animation: spin 0.9s linear infinite;
   }
 }

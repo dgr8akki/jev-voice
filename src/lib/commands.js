@@ -47,6 +47,9 @@ export const ACTIONS = {
 /** Actions whose argument keeps growing while the user talks: never act on a partial. */
 const WAIT_FOR_FINAL = new Set(['search', 'type', 'retarget', 'none']);
 
+/** A partial that ends on one of these verbs has its text still to come; there is nothing to ask about yet. */
+const FREE_TEXT_VERB = /\b(?:search(?:\s+for)?|look\s+up|google|type|write|enter|put|insert)\s*$/i;
+
 /** Hand-tuned against the eval suite; lower acts sooner but misfires more. */
 export const THRESHOLDS = { act: 0.5, early: 0.8, earlyTarget: 0.8, complete: 0.7 };
 
@@ -62,13 +65,44 @@ const SUBMIT_SUFFIX = /\s*\band (?:press |hit )?(?:enter|submit|search)\s*$/i;
  * @property {string | null} site Key of `SITES`, if Jev recognised one.
  */
 
+/** How much of a page's own text goes into a candidate label. */
+const LABEL_LIMIT = 60;
+
+const ordinal = (n) => {
+  const rest = n % 100;
+  const suffix = rest >= 11 && rest <= 13 ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
+  return `${n}${suffix}`;
+};
+
+/**
+ * A snapshot label as Jev sees it. The page wrote the text, so it is cut to
+ * a sentence, stripped of quotes and line breaks that could dress it up as an
+ * instruction, and prefixed with the element's kind and position, which the
+ * page does not control. "3rd link: Pricing".
+ *
+ * @param {string} label `kind: text` from `snapshot()`.
+ * @param {number} index Position in the snapshot, top to bottom.
+ */
+export function describeElement(label, index) {
+  const colon = label.indexOf(': ');
+  const kind = colon === -1 ? 'element' : label.slice(0, colon);
+  const text = (colon === -1 ? label : label.slice(colon + 2))
+    .replace(/["'`\u2018\u2019\u201c\u201d]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, LABEL_LIMIT);
+  return `${ordinal(index + 1)} ${kind}: ${text || '(unlabeled)'}`;
+}
+
 /**
  * The questions for one transcript: which action, which element, which site,
- * and (for partials) whether the speaker has finished.
+ * and (for partials) whether the speaker has finished. That last one is left
+ * out when the partial ends in a verb that takes free text, since the answer
+ * is known to be no.
  *
- * @param {{ elements: string[], final: boolean }} input
+ * @param {{ elements: string[], final: boolean, text?: string }} input
  */
-export function buildQuestions({ elements, final }) {
+export function buildQuestions({ elements, final, text = '' }) {
   return {
     action: {
       type: 'choice',
@@ -79,7 +113,7 @@ export function buildQuestions({ elements, final }) {
       type: 'choice',
       instructions: 'Which on-page element does the command refer to? Elements are listed top to bottom.',
       criteria: {
-        ...Object.fromEntries(elements.map((label, i) => [`e${i}`, label])),
+        ...Object.fromEntries(elements.map((label, i) => [`e${i}`, describeElement(label, i)])),
         none: 'No page element is referred to',
       },
     },
@@ -88,17 +122,18 @@ export function buildQuestions({ elements, final }) {
       instructions: 'Which website does the user want to go to?',
       criteria: { ...Object.fromEntries(Object.keys(SITES).map((name) => [name, name])), other: 'None of these' },
     },
-    ...(!final && {
-      complete: {
-        type: 'boolean',
-        instructions:
-          'This is a live partial speech transcript. Is the command already complete enough to act on, with nothing important likely still to be said?',
-        criteria: {
-          true: 'Complete, e.g. "go to youtube", "scroll down", "go back"',
-          false: 'Cut off mid-command, e.g. "go to", "click the", "open the second"',
+    ...(!final &&
+      !FREE_TEXT_VERB.test(text) && {
+        complete: {
+          type: 'boolean',
+          instructions:
+            'This is a live partial speech transcript. Is the command already complete enough to act on, with nothing important likely still to be said?',
+          criteria: {
+            true: 'Complete, e.g. "go to youtube", "scroll down", "go back"',
+            false: 'Cut off mid-command, e.g. "go to", "click the", "open the second"',
+          },
         },
-      },
-    }),
+      }),
   };
 }
 
@@ -111,20 +146,25 @@ export function buildQuestions({ elements, final }) {
  * @returns {Command | null}
  */
 export function toCommand(answers, { final }) {
-  const action = answers.action.choice;
-  const target = answers.target.choice === 'none' ? null : Number(answers.target.choice.slice(1));
-  const site = answers.site.choice === 'other' ? null : answers.site.choice;
+  // A partial reply or a schema change must read as "no command", not as a TypeError.
+  // On a partial transcript that means "wait", so the utterance stays open for its final.
+  const action = answers?.action?.choice;
+  if (typeof action !== 'string') return final ? { action: 'none', target: null, site: null } : null;
+  const targetChoice = answers.target?.choice;
+  const target = /^e\d+$/.test(targetChoice ?? '') ? Number(targetChoice.slice(1)) : null;
+  const siteChoice = answers.site?.choice;
+  const site = typeof siteChoice === 'string' && siteChoice in SITES ? siteChoice : null;
 
   if (!final) {
     const ready =
       !WAIT_FOR_FINAL.has(action) &&
-      answers.action.confidence >= THRESHOLDS.early &&
-      answers.complete.probability >= THRESHOLDS.complete &&
-      (action !== 'click' || (target !== null && answers.target.confidence >= THRESHOLDS.earlyTarget)) &&
+      (answers.action.confidence ?? 0) >= THRESHOLDS.early &&
+      (answers.complete?.probability ?? 0) >= THRESHOLDS.complete &&
+      (action !== 'click' || (target !== null && (answers.target.confidence ?? 0) >= THRESHOLDS.earlyTarget)) &&
       (action !== 'navigate' || site !== null);
     if (!ready) return null;
   }
-  if (answers.action.confidence < THRESHOLDS.act) return { action: 'none', target: null, site: null };
+  if ((answers.action.confidence ?? 0) < THRESHOLDS.act) return { action: 'none', target: null, site: null };
   return { action, target, site };
 }
 
@@ -169,6 +209,17 @@ export function localCommand(text, { final = true } = {}) {
 }
 
 /**
+ * Endings a spoken "something.x" may have before it counts as a web address.
+ * Recognizers write "readme.md" and "node.js" with a dot too, and those are
+ * not sites. Saying "dot" out loud is taken at its word whatever follows.
+ */
+const TLDS = new Set(
+  'com net org io co uk ie de fr es it nl eu us ca au nz in jp ch se no dk fi pl be at edu gov info biz dev app ai me tv fm gg to xyz site online tech store shop blog news'.split(
+    ' ',
+  ),
+);
+
+/**
  * A domain spoken outright ("facebook.com", "facebook dot com"), lowercased.
  *
  * @param {string} transcript
@@ -176,7 +227,10 @@ export function localCommand(text, { final = true } = {}) {
  */
 export function spokenDomain(transcript) {
   const match = transcript.match(/\b[a-z0-9-]+(?:(?:\.|\s+dot\s+)[a-z0-9-]+)*(?:\.|\s+dot\s+)[a-z]{2,}\b/i);
-  return match ? match[0].replace(/\s+dot\s+/gi, '.').toLowerCase() : null;
+  if (!match) return null;
+  const spokenDot = /\sdot\s/i.test(match[0]);
+  const domain = match[0].replace(/\s+dot\s+/gi, '.').toLowerCase();
+  return spokenDot || TLDS.has(domain.slice(domain.lastIndexOf('.') + 1)) ? domain : null;
 }
 
 /**

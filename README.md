@@ -157,6 +157,7 @@ evals/                     Live evaluation against Jev
 - Sees only elements in the viewport, up to 100, and not inside cross-origin iframes or closed shadow roots.
 - The cursor is drawn on the page; extensions can't move the system pointer.
 - Clicking is synthetic, so a few sites that require trusted user input will ignore it.
+- Element labels come from the page, so a page could name a link misleadingly to draw a click. Each label Jev sees carries the element's kind and position, which the page can't fake, and the activity list says exactly what was clicked, but the label text itself is the page's word.
 
 ## License
 

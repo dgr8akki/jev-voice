@@ -16,7 +16,8 @@ import {
   textQuestion,
   toCommand,
 } from './commands.js';
-import { clearLastTyped, clickElement, moveCursor, scrollPage, snapshot, typeInto } from './page.js';
+import { JevError } from './jev.js';
+import { clearLastTyped, clearMarkers, clickElement, moveCursor, scrollPage, snapshot, typeInto } from './page.js';
 
 /**
  * @typedef {object} Browser
@@ -46,9 +47,16 @@ const MISS = {
   noText: "Didn't catch what to type",
   whichField: 'Which field should it go in?',
   nothingTyped: 'Nothing has been typed on this page yet',
-  needsKey: 'Connect Jev to click, type and search by voice',
+  badNewTab: "That link opens a new tab in a way Chrome doesn't allow",
+  needsKey: 'Connect Jev to click links, fill forms and search by voice',
 };
 const MISSES = new Set(Object.values(MISS));
+
+/** Actions that address a page element through the snapshot's index markers. */
+const PAGE_ACTIONS = new Set(['click', 'type', 'retarget']);
+
+/** chrome://, the Web Store and PDF viewers refuse executeScript; say so rather than "Couldn't find that". */
+const RESTRICTED = new JevError("Chrome doesn't let extensions see this page. Navigation and tab commands still work.");
 
 /**
  * @param {object} deps
@@ -57,9 +65,39 @@ const MISSES = new Set(Object.values(MISS));
  * @param {() => number} [deps.now]
  * @param {() => boolean | Promise<boolean>} [deps.hasKey] Whether Jev can be called at all.
  */
+/** How many utterance ids to remember. A phrase's partials arrive within seconds; fifty is hours of talking. */
+const ACTED_LIMIT = 50;
+
+/** Snapshots kept for in-progress utterances. Partials reuse theirs; a final looks again. */
+const SNAPSHOT_LIMIT = 3;
+
 export function createHandler({ jev, browser, now = () => performance.now(), hasKey = () => true }) {
-  /** Utterance ids already acted on. Partials race each other; the first confident answer wins. */
+  /**
+   * Utterance ids already acted on. Partials race each other; the first confident answer wins.
+   * Kept in insertion order and capped so it cannot grow for the life of the worker. It is lost
+   * when Chrome restarts the worker; a final arriving right then could repeat a partial's action,
+   * which is accepted over persisting it.
+   */
   const acted = new Set();
+  const remember = (id) => {
+    acted.add(id);
+    if (acted.size > ACTED_LIMIT) acted.delete(acted.values().next().value);
+  };
+
+  /** @type {Map<string, { elements: string[], restricted: boolean }>} */
+  const snapshots = new Map();
+  async function lookAtPage(tabId, id, final) {
+    if (!final && snapshots.has(id)) return snapshots.get(id);
+    // chrome:// and Web Store pages can't be scripted; commands that don't need the page still work.
+    const seen = await browser.run(tabId, snapshot).then(
+      (elements) => ({ elements: elements ?? [], restricted: false }),
+      () => ({ elements: [], restricted: true }),
+    );
+    snapshots.delete(id);
+    snapshots.set(id, seen);
+    if (snapshots.size > SNAPSHOT_LIMIT) snapshots.delete(snapshots.keys().next().value);
+    return seen;
+  }
 
   /**
    * @param {{ text: string, final: boolean, id: string }} transcript
@@ -75,29 +113,34 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
     const tab = await browser.activeTab();
     let command = local;
     let elements = [];
+    let restricted = false;
     if (!command) {
-      // chrome:// and Web Store pages can't be scripted; commands that don't need the page still work.
-      elements = (await browser.run(tab.id, snapshot).catch(() => null)) ?? [];
+      ({ elements, restricted } = await lookAtPage(tab.id, id, final));
       const answers = await jev.evaluate({
         state: { transcript: text, page: { url: tab.url, title: tab.title }, elements },
-        questions: buildQuestions({ elements, final }),
+        questions: buildQuestions({ elements, final, text }),
       });
       command = toCommand(answers, { final });
     }
     if (!command || acted.has(id)) return {};
-    acted.add(id);
+    remember(id);
+    if (restricted && PAGE_ACTIONS.has(command.action)) throw RESTRICTED;
 
     const did = await perform(command, { text, tab, elements });
+    // The index markers have done their job once the action has run; leave the page as it was.
+    if (PAGE_ACTIONS.has(command.action) && !MISSES.has(did)) await browser.run(tab.id, clearMarkers).catch(() => {});
     return { did, ms: Math.round(now() - started), early: !final, miss: MISSES.has(did) };
   };
 
-  async function perform({ action, target, site }, { text, tab, elements }) {
+  async function perform({ action, target: picked, site }, { text, tab, elements }) {
+    // Jev's pick is only usable if it names an element that was actually listed.
+    const target = Number.isInteger(picked) && picked >= 0 && picked < elements.length ? picked : null;
     const label = target === null ? null : elements[target];
     switch (action) {
       case 'navigate': {
         const url = navigationUrl(text, site);
         await browser.navigate(tab.id, url);
-        return `Opened ${url}`;
+        return `Opened ${new URL(url).hostname.replace(/^www\./, '')}`;
       }
       case 'search': {
         const query = searchQuery(text);
@@ -108,8 +151,9 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
         if (target === null) return MISS.noTarget;
         await browser.run(tab.id, moveCursor, [target, 'click']);
         // Links that open a new tab are blocked as pop-ups when clicked by a script.
-        const newTabUrl = await browser.run(tab.id, clickElement, [target]);
-        if (newTabUrl) await browser.openTab(newTabUrl);
+        const result = await browser.run(tab.id, clickElement, [target]);
+        if (result?.blocked) return MISS.badNewTab;
+        if (result?.newTab) await browser.openTab(result.newTab);
         return `Clicked ${label}`;
       }
       case 'type': {
@@ -129,13 +173,20 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
       }
       case 'scroll_down':
       case 'scroll_up':
-        await browser.run(tab.id, scrollPage, [action === 'scroll_down' ? 1 : -1]);
+        await browser.run(tab.id, scrollPage, [action === 'scroll_down' ? 1 : -1]).catch(() => {
+          throw RESTRICTED;
+        });
         return action === 'scroll_down' ? 'Scrolled down' : 'Scrolled up';
       case 'back':
-        await browser.back(tab.id);
+        // tabs.goBack rejects at the start of history; that is an answer, not a fault.
+        await browser.back(tab.id).catch(() => {
+          throw new JevError('Nothing to go back to.');
+        });
         return 'Went back';
       case 'forward':
-        await browser.forward(tab.id);
+        await browser.forward(tab.id).catch(() => {
+          throw new JevError('Nothing to go forward to.');
+        });
         return 'Went forward';
       case 'reload':
         await browser.reload(tab.id);
@@ -160,6 +211,8 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
     const { candidates, submit } = textCandidates(transcript);
     if (candidates.length < 2) return { text: candidates[0] ?? '', submit };
     const answers = await jev.evaluate({ state: { command: transcript }, questions: textQuestion(candidates) });
-    return { text: candidates[Number(answers.text.choice.slice(1))], submit };
+    const pick = answers?.text?.choice;
+    const index = /^t\d+$/.test(pick ?? '') ? Number(pick.slice(1)) : -1;
+    return { text: candidates[index] ?? '', submit };
   }
 }

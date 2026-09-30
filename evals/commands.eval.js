@@ -25,15 +25,15 @@ const ELEMENTS = [
 // [said, final?, expectation on { outcome, calls }]
 const cases = [
   ['go to', false, ({ outcome }) => !outcome.did],
-  ['go to youtube', false, ({ outcome }) => outcome.did === 'Opened https://www.youtube.com'],
+  ['go to youtube', false, ({ outcome }) => outcome.did === 'Opened youtube.com'],
   ['click the', false, ({ outcome }) => !outcome.did],
   ['click the first result', false, ({ outcome }) => outcome.did === 'Clicked link: Alan Turing - Wikipedia'],
   ['search for', false, ({ outcome }) => !outcome.did],
   ['search for alan turing', false, ({ outcome }) => !outcome.did],
   ['scroll down', false, ({ outcome }) => outcome.did === 'Scrolled down'],
   ['type hello', false, ({ outcome }) => !outcome.did],
-  ['go to wikipedia', true, ({ outcome }) => outcome.did === 'Opened https://en.wikipedia.org'],
-  ['go to facebook.com', true, ({ outcome }) => outcome.did === 'Opened https://facebook.com'],
+  ['go to wikipedia', true, ({ outcome }) => outcome.did === 'Opened en.wikipedia.org'],
+  ['go to facebook.com', true, ({ outcome }) => outcome.did === 'Opened facebook.com'],
   ['search for alan turing', true, ({ outcome }) => outcome.did === 'Searched for "alan turing"'],
   ['click the first result', true, ({ outcome }) => outcome.did === 'Clicked link: Alan Turing - Wikipedia'],
   ['open the britannica one', true, ({ outcome }) => outcome.did === 'Clicked link: Alan Turing | Britannica'],

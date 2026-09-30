@@ -21,6 +21,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+      # Files listed in SHARED.md must match their pinned upstream commit. The
+      # shared repo has to be readable from CI; it is private at the moment.
+      - run: node scripts/sync-shared.js --check
       - run: npm run lint
       - run: npm run format:check
       - run: npm test

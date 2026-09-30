@@ -23,11 +23,11 @@ main {
 }
 
 .brand h1 {
-  font-size: 28px;
+  font-size: 1.75rem;
 }
 
 .brand p {
-  font-size: 15px;
+  font-size: 0.9375rem;
 }
 
 .card {
@@ -40,7 +40,7 @@ main {
 }
 
 h2 {
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1.2;
 }
 
@@ -51,7 +51,7 @@ h2 {
 }
 
 .intro p {
-  font-size: 14px;
+  font-size: 0.875rem;
   text-wrap: pretty;
 }
 
@@ -77,7 +77,7 @@ h2 {
 }
 
 .connected-head .badge {
-  font-size: 13px;
+  font-size: 0.8125rem;
   padding: 3px 8px;
 }
 
@@ -91,14 +91,6 @@ h2 {
   gap: 8px;
 }
 
-.current {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: var(--jv-muted);
-}
-
 /* Provider tiles: a real radio group. */
 
 .providers {
@@ -110,7 +102,7 @@ h2 {
 .providers legend {
   padding: 0;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--jv-muted);
 }
 
@@ -127,7 +119,7 @@ h2 {
   gap: 10px;
   min-height: var(--jv-hit);
   padding: 12px 14px;
-  border: 1px solid var(--jv-line);
+  border: 1px solid var(--jv-subtle);
   border-radius: var(--jv-radius-md);
   cursor: pointer;
 }
@@ -153,7 +145,7 @@ h2 {
   height: 16px;
   flex: none;
   margin-top: 2px;
-  border: 1.5px solid var(--jv-line);
+  border: 1.5px solid var(--jv-subtle);
   border-radius: 50%;
 }
 
@@ -167,7 +159,8 @@ h2 {
   box-shadow: inset 0 0 0 4px var(--jv-bg);
 }
 
-.tile input:focus-visible + .dot {
+/* The radio is hidden, so keyboard focus lights the whole tile, not just the dot. */
+.tile:has(input:focus-visible) {
   outline: 2px solid var(--jv-accent);
   outline-offset: 2px;
 }
@@ -183,7 +176,7 @@ h2 {
 }
 
 .tile small {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--jv-muted);
 }
 
@@ -197,7 +190,7 @@ h2 {
   padding: 0;
   list-style: none;
   counter-reset: step;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .steps li {
@@ -217,7 +210,7 @@ h2 {
   border: 1px solid var(--jv-accent);
   border-radius: 50%;
   color: var(--jv-accent-text);
-  font-size: 12px;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   translate: 0 -1px;
 }
@@ -227,7 +220,7 @@ h2 {
 .field > label {
   display: block;
   margin-bottom: 5px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: color-mix(in srgb, var(--jv-text) 70%, transparent);
 }
 
@@ -238,9 +231,30 @@ h2 {
   gap: 8px;
 }
 
-.row .input {
+.key-field {
   flex: 1 1 240px;
-  width: auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.key-field .input {
+  width: 100%;
+  padding-right: 64px;
+}
+
+/* Sits inside the field; a real button, so it is in the tab order with the shared focus ring. */
+.reveal {
+  position: absolute;
+  right: 4px;
+  min-height: calc(var(--jv-hit) - 8px);
+  padding: 0 10px;
+  color: var(--jv-accent-text);
+  font-size: 0.8125rem;
+}
+
+.reveal:hover {
+  background: color-mix(in srgb, var(--jv-accent) 12%, transparent);
 }
 
 .row .btn-primary {
@@ -248,7 +262,7 @@ h2 {
 }
 
 footer {
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-wrap: pretty;
 }
 

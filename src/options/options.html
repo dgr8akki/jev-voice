@@ -7,8 +7,10 @@
     <link rel="stylesheet" href="../ui/tokens.css" />
     <link rel="stylesheet" href="options.css" />
     <script type="module" src="options.js"></script>
+    <script type="module" src="reveal.js"></script>
   </head>
   <body
+    data-app="Jev Voice"
     data-next="Open the Jev Voice side panel: clicking, typing and searching now work too, alongside the scroll, tab and open-site commands that never needed a key."
   >
     <main>
@@ -32,7 +34,7 @@
             <path d="M8 12.5l2.7 2.7L16 9.8" />
           </svg>
           <div>
-            <h2 id="connected-title" tabindex="-1">Connected via <span id="provider-label"></span></h2>
+            <h2 id="connected-title">Connected via <span id="provider-label"></span></h2>
             <code id="masked" class="badge"></code>
           </div>
         </div>
@@ -45,14 +47,6 @@
       </section>
 
       <form id="key-form" class="card" aria-labelledby="connect-title" hidden>
-        <p id="current" class="current" hidden>
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M8 12.5l2.7 2.7L16 9.8" />
-          </svg>
-          <span>Connected via <span id="current-provider"></span></span>
-          <code id="current-masked" class="badge"></code>
-        </p>
         <div class="intro">
           <h2 id="connect-title">Connect Jev</h2>
           <p class="muted">
@@ -84,15 +78,20 @@
         <div class="field">
           <label for="api-key">API key</label>
           <div class="row">
-            <input
-              id="api-key"
-              class="input"
-              type="password"
-              autocomplete="off"
-              spellcheck="false"
-              aria-describedby="key-status"
-              required
-            />
+            <span class="key-field">
+              <input
+                id="api-key"
+                class="input"
+                type="password"
+                autocomplete="off"
+                spellcheck="false"
+                aria-describedby="key-status"
+                required
+              />
+              <button id="reveal" type="button" class="btn reveal" aria-pressed="false" aria-controls="api-key">
+                Show
+              </button>
+            </span>
             <div class="row-buttons">
               <button type="submit" class="btn btn-primary">Connect</button>
               <button id="cancel" type="button" class="btn btn-secondary" hidden>Cancel</button>
@@ -109,5 +108,33 @@
         >.
       </footer>
     </main>
+
+    <!-- Status marks, cloned in front of each status line so no state relies on colour alone. -->
+    <template data-icon="busy">
+      <svg class="spin" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="8" opacity=".3" />
+        <path d="M12 4a8 8 0 0 1 8 8" />
+      </svg>
+    </template>
+    <template data-icon="ok">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M8 12.5l2.7 2.7L16 9.8" />
+      </svg>
+    </template>
+    <template data-icon="error">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3.5l9.5 16.5h-19z" />
+        <path d="M12 10v4.5" />
+        <circle cx="12" cy="17.2" r=".7" fill="currentColor" />
+      </svg>
+    </template>
+    <template data-icon="neutral">
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v5" />
+        <circle cx="12" cy="7.8" r=".7" fill="currentColor" />
+      </svg>
+    </template>
   </body>
 </html>

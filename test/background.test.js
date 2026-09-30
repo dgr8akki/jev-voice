@@ -75,6 +75,39 @@ describe('background service worker', () => {
     }
   });
 
+  it('wraps around when switching past the last or first tab', async () => {
+    const updates = [];
+    const tabs = [
+      { id: 1, index: 0, windowId: 1 },
+      { id: 2, index: 1, windowId: 1 },
+      { id: 3, index: 2, windowId: 1 },
+    ];
+    const store = { apiKey: 'vck_test' };
+    const { listeners } = await load('tabs', () => {}, store);
+    globalThis.chrome.tabs = {
+      query: async ({ active }) => (active ? [tabs[2]] : tabs),
+      update: async (id, props) => updates.push([id, props]),
+    };
+    const [onMessage] = listeners.message;
+    const send = (text, id) =>
+      new Promise((resolve) => onMessage({ type: 'transcript', text, final: true, id }, {}, resolve));
+    assert.equal((await send('next tab', 'n1')).did, 'Switched to the next tab');
+    assert.deepEqual(updates.at(-1), [1, { active: true }], 'after the last tab comes the first');
+    globalThis.chrome.tabs.query = async ({ active }) => (active ? [tabs[0]] : tabs);
+    assert.equal((await send('previous tab', 'n2')).did, 'Switched to the previous tab');
+    assert.deepEqual(updates.at(-1), [3, { active: true }], 'before the first tab comes the last');
+  });
+
+  it('answers "No active tab." when there is none', async () => {
+    const { listeners } = await load('notab', () => {}, { apiKey: 'vck_test' });
+    globalThis.chrome.tabs = { query: async () => [] };
+    const [onMessage] = listeners.message;
+    const reply = await new Promise((resolve) => {
+      onMessage({ type: 'transcript', text: 'go back', final: true, id: 't9' }, {}, resolve);
+    });
+    assert.deepEqual(reply, { error: 'No active tab.' });
+  });
+
   it('ignores messages that are not transcripts', async () => {
     const { listeners } = await load('messages', () => {});
     const [onMessage] = listeners.message;

@@ -25,7 +25,8 @@ export function snapshot() {
   for (const el of document.querySelectorAll(`[${ATTR}]`)) el.removeAttribute(ATTR);
 
   const selector =
-    'a[href], button, input:not([type=hidden]):not([type=password]), textarea, select, [role=button], [role=link], [role=tab], [role=menuitem], [contenteditable=true]';
+    'a[href], button, input:not([type=hidden]):not([type=password]), textarea, select, summary, ' +
+    '[role=button], [role=link], [role=tab], [role=menuitem], [role=checkbox], [role=switch], [role=combobox], [contenteditable=true]';
   const visible = [...document.querySelectorAll(selector)].filter((el) => {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight;
@@ -33,20 +34,29 @@ export function snapshot() {
 
   return visible.slice(0, LIMIT).map((el, i) => {
     el.setAttribute(ATTR, String(i));
-    const field = el.matches('input, textarea, select, [contenteditable=true]');
+    const field = el.matches('input, textarea, select, [role=combobox], [contenteditable=true]');
     const kind = field ? 'field' : el.matches('a, [role=link]') ? 'link' : 'button';
+    // aria-labelledby names other elements; their text is a label, not a value.
+    const labelledBy = (el.getAttribute('aria-labelledby') ?? '')
+      .split(/\s+/)
+      .map((id) => document.getElementById(id)?.textContent ?? '')
+      .join(' ')
+      .trim();
     // A field's content is the user's, so its label can only come from attributes
     // and its <label>: never value, never the text inside an editor or a select.
     const text = field
-      ? el.getAttribute('aria-label') ||
+      ? labelledBy ||
+        el.getAttribute('aria-label') ||
         el.labels?.[0]?.textContent ||
         el.getAttribute('placeholder') ||
         el.getAttribute('data-placeholder') ||
         el.getAttribute('title') ||
         el.getAttribute('name') ||
         ''
-      : el.getAttribute('aria-label') ||
+      : labelledBy ||
+        el.getAttribute('aria-label') ||
         (el.innerText ?? el.textContent) ||
+        el.querySelector('svg > title')?.textContent ||
         el.getAttribute('title') ||
         el.querySelector('img')?.getAttribute('alt') ||
         '';
@@ -111,11 +121,19 @@ export async function moveCursor(index, kind = 'click') {
 
   await new Promise((resolve) => setTimeout(resolve, reduceMotion ? 120 : 320));
 
-  // Outline the target, keeping the page's own inline values to restore.
-  const saved = [el.style.outline, el.style.outlineOffset, el.style.boxShadow];
-  el.style.outline = '2px solid #b5abfc';
-  el.style.outlineOffset = '2px';
-  el.style.boxShadow = (saved[2] ? saved[2] + ', ' : '') + '0 0 0 6px rgba(22,24,38,.72)';
+  // Highlight the target with a box laid over it, not by restyling it: the
+  // page's own focus ring must still show the moment the click lands.
+  let box = document.getElementById('jev-voice-target');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'jev-voice-target';
+    box.setAttribute('aria-hidden', 'true');
+    document.documentElement.append(box);
+  }
+  box.style.cssText =
+    `position:fixed;left:${r.left - 4}px;top:${r.top - 4}px;width:${r.width + 8}px;height:${r.height + 8}px;` +
+    'border:2px solid #b5abfc;border-radius:6px;box-shadow:0 0 0 6px rgba(22,24,38,.72);' +
+    'pointer-events:none;z-index:2147483646';
   if (kind === 'click' && !reduceMotion) {
     cursor
       .querySelector('.ring')
@@ -134,27 +152,46 @@ export async function moveCursor(index, kind = 'click') {
       cursor.jevRestore?.();
       cursor.style.transition = 'opacity 240ms ease';
       cursor.style.opacity = '0';
+      // Gone once faded, so nothing of ours stays in the page's DOM.
+      setTimeout(() => cursor.isConnected && cursor.style.opacity === '0' && cursor.remove(), 260);
     },
     reduceMotion ? 1200 : 900,
   );
   cursor.jevRestore = () => {
     clearTimeout(hide);
-    [el.style.outline, el.style.outlineOffset, el.style.boxShadow] = saved;
+    box.remove();
     cursor.jevRestore = null;
   };
 }
 
 /**
- * Clicks an element. Returns the URL instead for links that open a new tab,
- * which Chrome would block as a pop-up when clicked from a script.
+ * Removes everything the extension put on the page: the index markers, the
+ * cursor and the highlight box. Run after an action has completed.
+ */
+export function clearMarkers() {
+  for (const el of document.querySelectorAll('[data-jev-voice]')) el.removeAttribute('data-jev-voice');
+  document.getElementById('jev-voice-cursor')?.jevRestore?.();
+  document.getElementById('jev-voice-cursor')?.remove();
+  document.getElementById('jev-voice-target')?.remove();
+}
+
+/**
+ * Clicks an element. For links that open a new tab (the element itself or a
+ * link around it), returns the address instead, because Chrome blocks a
+ * scripted click on those as a pop-up; the service worker opens the tab.
+ * Only http(s) addresses are handed over: `tabs.create` refuses the rest.
  *
  * @param {number} index
- * @returns {string | null}
+ * @returns {{ newTab: string } | { blocked: string } | null}
  */
 export function clickElement(index) {
   const el = document.querySelector(`[data-jev-voice="${index}"]`);
   if (!el) return null;
-  if (el.matches('a[target=_blank]')) return el.href;
+  const link = el.closest('a[href]');
+  if (link && link.target === '_blank') {
+    const url = new URL(link.href); // the .href property is already absolute
+    return /^https?:$/.test(url.protocol) ? { newTab: url.href } : { blocked: url.protocol };
+  }
   el.click();
   el.focus?.();
   return null;

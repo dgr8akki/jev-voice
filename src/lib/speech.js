@@ -18,6 +18,18 @@ const ERROR_MESSAGES = {
   'audio-capture': 'No microphone was found.',
   network: "Speech recognition can't reach Google's servers and on-device recognition isn't available.",
   'language-not-supported': 'English speech recognition is not available in this browser.',
+  'start-failed': "Couldn't start listening. Try again.",
+  'restart-failed': 'Listening stopped and could not be resumed. Press Start listening again.',
+};
+
+/** Timings; overridable for tests. */
+const DEFAULTS = {
+  /** `recognition.start()` throws InvalidStateError while the last session is still tearing down. */
+  restartDelayMs: 250,
+  maxRestarts: 3,
+  /** Brave never settles `available()`; give it this long before assuming cloud. */
+  availabilityTimeoutMs: 3_000,
+  installTimeoutMs: 60_000,
 };
 
 /**
@@ -34,8 +46,14 @@ const ERROR_MESSAGES = {
  * @param {(status: { listening: boolean, mode?: 'on-device' | 'cloud' }) => void} [callbacks.onStatus]
  * @param {(message: string) => void} [callbacks.onNotice] One-off progress messages.
  * @param {string} [lang]
+ * @param {Partial<typeof DEFAULTS>} [options]
  */
-export function createListener({ onTranscript, onError, onStatus = () => {}, onNotice = () => {} }, lang = 'en-US') {
+export function createListener(
+  { onTranscript, onError, onStatus = () => {}, onNotice = () => {} },
+  lang = 'en-US',
+  options = {},
+) {
+  const { restartDelayMs, maxRestarts, availabilityTimeoutMs, installTimeoutMs } = { ...DEFAULTS, ...options };
   const Recognition = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition;
   const unsupportedReason = navigator.brave
     ? 'Brave has no working speech recognition. Use Google Chrome, or type commands instead.'
@@ -48,16 +66,17 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
   let mode = null;
   let session = 0;
   let lastWordCount = 0;
+  let restarts = 0;
 
   async function chooseMode() {
     if (mode) return;
     mode = 'cloud';
     if (!Recognition.available) return;
     const options = { langs: [lang], processLocally: true };
-    let state = await within(Recognition.available(options), 3_000, 'unavailable');
+    let state = await within(Recognition.available(options), availabilityTimeoutMs, 'unavailable');
     if (state === 'downloadable' || state === 'downloading') {
       onNotice('Downloading the on-device speech model. This happens once.');
-      state = (await within(Recognition.install(options), 60_000, false)) ? 'available' : 'unavailable';
+      state = (await within(Recognition.install(options), installTimeoutMs, false)) ? 'available' : 'unavailable';
     }
     if (state === 'available') mode = 'on-device';
   }
@@ -71,6 +90,7 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
     r.onstart = () => {
       session += 1;
       lastWordCount = 0;
+      restarts = 0;
     };
     r.onresult = (event) => {
       const index = event.results.length - 1;
@@ -85,7 +105,7 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
     };
     // Chrome ends continuous recognition after a stretch of silence.
     r.onend = () => {
-      if (listening) r.start();
+      if (listening) restart();
     };
     r.onerror = (event) => {
       if (BENIGN_ERRORS.has(event.error)) return;
@@ -98,13 +118,37 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
     return r;
   }
 
+  /**
+   * Starts again after Chrome ended the session. start() throws while the old
+   * session is still tearing down, so one failure waits a moment and tries
+   * again; repeated failures stop, so the button never claims to listen while
+   * nothing is being heard.
+   */
+  function restart() {
+    try {
+      recognition.start();
+    } catch {
+      if (restarts >= maxRestarts) {
+        stop();
+        onError({ code: 'restart-failed', message: ERROR_MESSAGES['restart-failed'] });
+        return;
+      }
+      restarts += 1;
+      setTimeout(() => listening && restart(), restartDelayMs);
+    }
+  }
+
   async function start() {
     if (unsupportedReason) return onError({ code: 'unsupported', message: unsupportedReason });
     if (listening) return;
     await chooseMode();
     recognition ??= build();
+    try {
+      recognition.start();
+    } catch {
+      return onError({ code: 'start-failed', message: ERROR_MESSAGES['start-failed'] });
+    }
     listening = true;
-    recognition.start();
     onStatus({ listening, mode });
   }
 

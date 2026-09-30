@@ -9,6 +9,8 @@ import { createListener } from '../lib/speech.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVITY = 30;
+/** Recognizers emit a partial per word; waiting this long after the last one saves a request per word. */
+const PARTIAL_PAUSE_MS = 250;
 
 // ---------------------------------------------------------------------------
 // Live line: what the recognizer heard, word by word
@@ -49,18 +51,33 @@ function setNotice(text, kind = 'mode') {
 // Commands
 
 const queue = createTranscriptQueue(async (transcript) => {
+  // A final is a request the user is waiting on: show it working, then fill the same card in.
+  // Partials stay silent until one of them acts.
+  const pending = transcript.final
+    ? logActivity(transcript.text, `Working on “${transcript.text}”…`, { kind: 'pending' })
+    : null;
+  $('activity').setAttribute('aria-busy', String(Boolean(pending)));
+  // A partial that finds the worker asleep is not worth an error line; the worker itself stays quiet on partials too.
   const outcome = await chrome.runtime
     .sendMessage({ type: 'transcript', ...transcript })
-    .catch(() => ({ error: 'The extension restarted. Try again.' }));
-  if (outcome?.error) return logActivity(transcript.text, outcome.error, { kind: 'error' });
-  if (!outcome?.did) return;
+    .catch(() => (transcript.final ? { error: 'The extension restarted. Try again.' } : {}));
+  if (pending) $('activity').setAttribute('aria-busy', 'false');
+  if (outcome?.error) return logActivity(transcript.text, outcome.error, { kind: 'error', into: pending });
+  if (!outcome?.did) return pending?.remove();
   if (outcome.early) {
     fired = { id: transcript.id, words: transcript.text.split(/\s+/).length };
     renderHeard();
   }
   const kind = outcome.miss ? 'miss' : outcome.did === 'Ignored' ? 'ignored' : 'ok';
-  logActivity(transcript.text, outcome.did, { kind, ms: outcome.ms, early: outcome.early });
+  logActivity(transcript.text, outcome.did, { kind, ms: outcome.ms, early: outcome.early, into: pending });
 });
+
+// "What can I say?" folds away once the first command lands, unless the user has
+// opened or closed it themselves: then it is theirs and stays put.
+let examplesTouched = false;
+$('examples')
+  .querySelector('summary')
+  .addEventListener('click', () => (examplesTouched = true));
 
 let typedCount = 0;
 $('command-form').addEventListener('submit', (event) => {
@@ -72,19 +89,22 @@ $('command-form').addEventListener('submit', (event) => {
 });
 
 /**
- * Prepends an entry; CSS turns the newest one into the last-action card.
+ * Prepends an entry, or fills in a pending one; CSS turns the newest one into the last-action card.
  *
  * @param {string | null} said What the user said, or null for system messages.
- * @param {string} text Outcome in plain past tense, or an error.
- * @param {{ kind: 'ok' | 'miss' | 'error' | 'ignored', ms?: number, early?: boolean }} details
+ * @param {string} text Outcome in plain past tense, an error, or what is being worked on.
+ * @param {{ kind: 'ok' | 'miss' | 'error' | 'ignored' | 'pending', ms?: number, early?: boolean, into?: HTMLElement | null }} details
+ * @returns {HTMLElement} The entry, so a pending one can be filled in later.
  */
-function logActivity(said, text, { kind, ms, early }) {
-  const item = $('entry').content.firstElementChild.cloneNode(true);
+function logActivity(said, text, { kind, ms, early, into = null }) {
+  const item = into?.isConnected ? into : $('entry').content.firstElementChild.cloneNode(true);
   item.dataset.kind = kind;
   if (early) item.dataset.early = '';
   item.querySelector('.said').textContent = said ? `“${said}”` : '';
+  item.querySelector('.outcome').classList.remove('error', 'result');
   item.querySelector('.outcome').classList.add(kind === 'error' ? 'error' : 'result');
   item.querySelector('.text').textContent = text;
+  item.querySelector('.tail').textContent = '';
   if (ms !== undefined) {
     const tail = item.querySelector('.tail');
     tail.textContent = `in ${ms} ms`;
@@ -97,22 +117,27 @@ function logActivity(said, text, { kind, ms, early }) {
       );
     }
   }
-  $('activity').prepend(item);
+  if (item !== into) $('activity').prepend(item);
   $('activity-empty').hidden = true;
-  $('examples').open = false;
+  if (!examplesTouched) $('examples').open = false;
   while ($('activity').children.length > MAX_ACTIVITY) $('activity').lastChild.remove();
+  return item;
 }
 
 // ---------------------------------------------------------------------------
 // Microphone
 
 let micBlocked = false;
+let pendingPartial = null;
 
 const listener = createListener({
   onTranscript(transcript) {
     heard = transcript;
     renderHeard();
-    queue.push(transcript);
+    // The screen follows every word; the worker only hears from us once the words pause, or at the final.
+    clearTimeout(pendingPartial);
+    if (transcript.final) queue.push(transcript);
+    else pendingPartial = setTimeout(() => queue.push(transcript), PARTIAL_PAUSE_MS);
   },
   onError({ code, message }) {
     micBlocked = code === 'not-allowed' || code === 'audio-capture';
@@ -138,16 +163,20 @@ const listener = createListener({
   },
 });
 
-/** Mic states: idle, listening, off (no speech recognition) and error (blocked). No key still means idle. */
+/**
+ * Mic states: idle, listening, off (no speech recognition) and error (blocked).
+ * No key still means idle. The button is always operable (off explains itself
+ * when pressed), so it is never aria-disabled, and its state lives in the
+ * label alone: "Start listening" / "Stop listening", not a pressed toggle
+ * whose name changes underneath it.
+ */
 function renderMic() {
   const listening = listener.listening;
   const state = listening ? 'listening' : !listener.supported ? 'off' : micBlocked ? 'error' : 'idle';
   const mic = $('mic');
   mic.dataset.state = state;
   mic.toggleAttribute('data-slash', !listener.supported);
-  mic.setAttribute('aria-pressed', String(listening));
-  mic.setAttribute('aria-disabled', String(state === 'off'));
-  $('mic-label').textContent = listening ? 'Listening' : 'Start listening';
+  $('mic-label').textContent = listening ? 'Stop listening' : 'Start listening';
   $('status-dot').classList.toggle('listening', listening);
   document.body.classList.toggle('listening', listening);
   document.body.classList.toggle('typing-first', !listener.supported || micBlocked);
@@ -168,9 +197,11 @@ if (!listener.supported) {
 // Settings
 
 // Without a key the panel still scrolls, navigates and manages tabs; the banner says what a key adds.
-await mountConnection($('connection'), $('open-settings'), (isConnected) => {
-  $('settings').dataset.connected = String(isConnected);
-  $('connect-banner').hidden = isConnected;
+await mountConnection($('connection'), $('open-settings'), {
+  onChange(isConnected) {
+    $('settings').dataset.connected = String(isConnected);
+    $('connect-banner').hidden = isConnected;
+  },
 });
 $('connect-banner-button').addEventListener('click', () => chrome.runtime.openOptionsPage());
 renderMic();
