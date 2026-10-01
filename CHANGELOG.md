@@ -2,7 +2,7 @@
 
 One section per release, the newest on top. Version numbers are semver. A release gets a Fixed heading only when it repaired something that had actually been broken; otherwise it lists additions and changes.
 
-## [1.2.1] - 2026-09-30
+## [1.2.1] - 2026-10-01
 
 ### Added
 
@@ -19,6 +19,11 @@ One section per release, the newest on top. Version numbers are semver. A releas
 - The on-page highlight is drawn over the target instead of restyling it, and the index markers are removed once an action has run.
 - The on-page marker is two colours now, the brand accent over a dark keyline, without the diagonal tick.
 - New icon: a microphone on a round badge; the settings page mark uses the same glyph.
+- The activity list is headed "Recent commands" and, while it is empty, suggests trying "scroll down" or "open wikipedia". "What can I say?" is down to five groups of commands.
+- Errors read plainer: "Couldn't run that. Try once more." instead of "Something went wrong", and the blocked-microphone line says what Chrome is waiting for.
+- Settings: the form is headed "Add your Jev key" and the intro gives the cost (about a hundredth of a cent a command; a $1 spend limit lasts months). The provider tiles say who bills you: "Billed through Vercel, which passes requests to TypeSafe" and "Billed by TypeSafe, which runs Jev". The footer says requests go to the provider's host and nowhere else, and once connected the page suggests a first command to try.
+- The microphone page is headed "One microphone prompt". After you allow it, focus moves to the message telling you to close the tab and press Start listening.
+- Quotes in the panel and on the settings and microphone pages are straight ones.
 - Every page declares `color-scheme` in its head, so form controls never flash the wrong scheme before the stylesheet loads.
 
 ### Fixed
