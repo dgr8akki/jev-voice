@@ -156,10 +156,10 @@ describe('side panel', () => {
     assert.equal($('activity-empty').hidden, true);
   });
 
-  it('gives Settings and Activity real headings at the same level', async () => {
+  it('gives Settings and Recent commands real headings at the same level', async () => {
     const { document } = await load();
     const headings = [...document.querySelectorAll('h2')].map((h) => h.textContent.trim());
-    assert.deepEqual(headings, ['Settings', 'Activity']);
+    assert.deepEqual(headings, ['Settings', 'Recent commands']);
     assert.ok(document.querySelector('#settings h2.kicker'), 'the kicker look stays; only the element changes');
   });
 
@@ -271,7 +271,7 @@ describe('side panel', () => {
     assert.equal(list.children.length, 1);
     const card = list.firstElementChild;
     assert.equal(card.dataset.kind, 'pending');
-    assert.equal(card.querySelector('.text').textContent, 'Working on “scroll down”…');
+    assert.equal(card.querySelector('.text').textContent, 'Working on "scroll down"...');
 
     release();
     for (let i = 0; i < 3; i += 1) await settle();

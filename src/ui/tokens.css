@@ -173,12 +173,12 @@ svg {
   color: var(--jv-muted);
 }
 
-/* Icon mark: a dot for your voice, a tick for the action. */
+/* The microphone, as on the extension icon: a round badge, not a card. */
 .mark {
   display: grid;
   place-items: center;
   flex: none;
-  border-radius: var(--jv-radius-lg);
+  border-radius: 50%;
   background: var(--jv-surface);
   color: var(--jv-accent-text);
 }

@@ -1,163 +1,115 @@
-<div align="center">
-
-<img src="assets/icon.svg" width="72" height="72" alt="" />
-
 # Jev Voice
 
-**Control Chrome by voice.** Open sites, search, click links and fill in forms by saying what you want.
+Jev Voice is a voice control extension for Chrome. You open sites, search, click links and fill in forms by saying what you want, and most short commands run before you have finished the sentence.
 
 [![CI](https://github.com/dgr8akki/jev-voice/actions/workflows/ci.yml/badge.svg)](https://github.com/dgr8akki/jev-voice/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-5d5294.svg)](LICENSE)
-![Manifest V3](https://img.shields.io/badge/manifest-v3-5d5294.svg)
-![Chrome 116+](https://img.shields.io/badge/chrome-116%2B-5d5294.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
   <img src="docs/screenshot-light.png" width="360" alt="Jev Voice side panel while listening. The words go back are underlined because the extension went back before the sentence finished; below, recent commands: typing a name into a form field, a click and a search." />
 </picture>
 
-</div>
+## What it does
 
-## Features
+You don't have to learn a command list. "Open the Britannica one" and "surname Pahuja" both work, because the extension looks at what is on the page and works out which link or field you mean. Short commands like "go back" fire before you have finished saying the sentence; the side panel underlines the words it acted on. For forms, it picks the field from its label, types the words you said, and submits when you add "and press enter". If it put the text in the wrong field, "no, that's the first name" moves it.
 
-- **Say it the way you'd say it.** "Open the Britannica one", "type hello in the email bar", "surname Pahuja".
-- **Acts before you finish.** Commands such as "go back" or "scroll down" run as soon as they're unambiguous, often mid-sentence.
-- **Fills in forms.** Picks the right field from its label, types the right words, and submits when you say "and press enter".
-- **Takes corrections.** "No, that's the first name, not the surname" moves what it just typed.
-- **Shows what it's doing.** A marker glides beside the element and outlines it before clicking or typing, and the side panel underlines the words an early action fired on.
-- **Private by default.** On-device speech recognition where Chrome supports it. No accounts, no analytics.
+Before it clicks or types, it draws a marker next to the element so you can see what it picked. Speech recognition runs on your machine on Chrome 139 and later, otherwise through Google's speech service, and the panel says which one is in use. There is no account, and requests go only to the provider you chose.
+
+Scrolling, tabs, history and opening a site by name work as soon as the extension is installed. Clicking, typing and searching need a Jev key, which takes a couple of minutes to set up (see Install).
 
 ## How it works
 
-Jev Voice is built on [Jev](https://typesafe.ai), TypeSafe's System One model. Jev doesn't generate text: it answers typed questions with probabilities. Jev Voice never asks it to write a URL, a CSS selector or the text to type. Code lists the candidates and Jev picks one.
+Under the hood it calls Jev, TypeSafe's decision model, and treats it as a classifier rather than a generator. For each command the extension builds the lists itself: the actions it knows, the visible links, buttons and fields on the page (labels only, never their contents), a few well known sites, and every run of consecutive words in what you said. Jev picks one item from each list. It never writes a URL, a selector or the text to type, so a bad answer is at worst the wrong pick from a list the extension already had.
 
-```mermaid
-flowchart LR
-  A[Speech, word by word] --> B[Snapshot of visible links, buttons and fields]
-  B --> C{Jev: one call}
-  C -->|which action?| D[navigate, click, type, scroll, ...]
-  C -->|which element?| E[Element list from the page]
-  C -->|which site?| F[Known sites]
-  D & E & F --> G[Service worker acts in the tab]
-```
-
-- **Candidates, not generation.** Every visible link, button and field becomes a labelled option ("field: Email address"). Jev picks the one you meant.
-- **Typing without generation.** For "type hello in this email bar", every run of consecutive words in the command is a candidate. A second, small Jev call picks "hello".
-- **Early action.** On each new word, Jev also answers "is this command complete?". Commands that can't change with more words run immediately. Searches and typing always wait for you to finish.
+While you are still speaking, each partial transcript also carries the question "is this command complete?". Commands that cannot change with more words, like "scroll down", run as soon as Jev is confident. Searches and typing always wait for the final transcript.
 
 ## Install
 
-Jev Voice isn't on the Chrome Web Store yet. To install from source:
+The store listing is still in review, so for now it loads unpacked. Grab the newest `jev-voice-x.y.z.zip` from [Releases](https://github.com/dgr8akki/jev-voice/releases) and unzip it somewhere it can stay (Chrome reads the folder in place). At `chrome://extensions`, switch on Developer mode, choose Load unpacked, then select that folder (or `src/` in a clone). The microphone icon lands in the puzzle-piece menu; pin it so the side panel is one click away.
 
-1. Download the latest `jev-voice-x.y.z.zip` from [Releases](https://github.com/dgr8akki/jev-voice/releases) and unzip it, or clone this repo.
-2. Open `chrome://extensions` and turn on **Developer mode**.
-3. Click **Load unpacked** and select the unzipped folder (or `src/` in a clone).
-4. Pin **Jev Voice** from the puzzle-piece menu.
+Clicking, typing and searching go through Jev, so they need a key of your own. Two kinds work: a [TypeSafe API key](https://console.typesafe.ai/keys), or a [Vercel AI Gateway key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys) that routes to the same model. Installing the extension opens its settings tab. Choose the provider whose key you have, paste it in and press Connect; Jev Voice makes one test request before storing the key, and from then on displays only a masked form of it.
 
-You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Vercel AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys). The settings page opens on install: pick your provider, paste the key and select **Connect**; it's checked before it's saved. Jev costs $0.042 per million input tokens (a fraction of a cent per command). With Vercel, set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key.
+Cost is small. TypeSafe's [pricing page](https://typesafe.ai/pricing) listed Jev at $0.042 per million input tokens in September 2026, which comes to a fraction of a cent per command. A Vercel key can also carry a [budget](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) that caps what it spends.
+
+Brave has the speech API but no backend behind it, so use Chrome. Typed commands still work in Brave.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
-  <img src="docs/options-light.png" width="520" alt="The Jev Voice settings page: a Connect Jev card with a choice between Vercel AI Gateway and TypeSafe, setup steps for the chosen provider, an API key field and a Connect button." />
+  <img src="docs/options-light.png" width="520" alt="Jev Voice settings with no key yet. Two provider tiles, Vercel AI Gateway and TypeSafe, sit above numbered steps for the selected one, and below them a masked key input next to its Connect button." />
 </picture>
 
-> [!NOTE]
-> Use Google Chrome. Brave ships no working speech recognition; you can still type commands there.
+## Talking to it
 
-## Usage
+Click the Jev Voice icon to open the side panel and press Start listening. The first time, Chrome asks for microphone access in a new tab. Then talk.
 
-1. Click the Jev Voice icon to open the side panel.
-2. If you haven't connected a key yet, the panel shows **Connect Jev**; select it to open settings.
-3. Select **Start listening**. The first time, Chrome asks for microphone access in a new tab.
-
-| Say                                                     | What happens                                    |
-| ------------------------------------------------------- | ----------------------------------------------- |
-| "Go to wikipedia", "open facebook dot com"              | Opens the site                                  |
-| "Search for Alan Turing"                                | Searches Google                                 |
-| "Click the first result", "open the pricing link"       | Clicks the matching link or button              |
-| "Type hello in the email field and press enter"         | Types into the matching field, then submits     |
-| "Surname Pahuja", "in first name put Akash"             | Types into the named field                      |
-| "No, that's the first name, not the surname"            | Moves the text it just typed to the right field |
-| "Scroll down", "go back", "go forward", "reload"        | Scrolls or navigates history                    |
-| "New tab", "next tab", "previous tab", "close this tab" | Manages tabs                                    |
+| Say                                                | What happens                                    |
+| -------------------------------------------------- | ----------------------------------------------- |
+| "Go to wikipedia", "open rte dot ie"               | Opens the site                                  |
+| "Search for train times to Cork"                   | Searches Google                                 |
+| "Click the first result", "open the pricing link"  | Clicks the matching link or button              |
+| "Type hello in the email field and press enter"    | Types into the matching field, then submits     |
+| "Surname Pahuja", "in first name put Akash"        | Types into the named field                      |
+| "No, that's the first name"                        | Moves the text it just typed to the right field |
+| "Scroll down", "go back", "go forward", "reload"   | Scrolls or navigates history                    |
+| "New tab", "next tab", "previous tab", "close tab" | Manages tabs                                    |
 
 You can type any command in the box under the microphone button.
 
-## Privacy and permissions
+## Access it asks for
 
-| Permission                | Why                                                                                |
-| ------------------------- | ---------------------------------------------------------------------------------- |
-| `sidePanel`               | Shows the controls beside the page                                                 |
-| `scripting`, `<all_urls>` | Lists the visible links, buttons and fields on the active tab, and clicks or types |
-| `storage`                 | Keeps your API key in this browser                                                 |
-| Microphone                | Hears commands; audio is transcribed by the browser and never stored               |
+| Permission                   | Why                                                                                                    |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `sidePanel`                  | Shows the controls beside the page                                                                     |
+| `scripting`, `http(s)://*/*` | Lists the visible links, buttons and fields on the active tab, and clicks, types or scrolls when asked |
+| `storage`                    | Keeps your API key in this browser                                                                     |
+| Microphone                   | Feeds Chrome's speech recogniser; Jev Voice keeps no audio                                             |
 
-For each command, the transcript, the active tab's URL and title, and the labels of visible links, buttons and fields are sent to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. Field values and page text are not sent. See [PRIVACY.md](PRIVACY.md).
+For each phrase, the transcript, the active tab's URL and title, and the labels of visible links, buttons and fields go to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. While you are speaking the same phrase may be sent several times. Field values and page text are never sent. The details are in [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
-Requires Node.js 22 or later.
+Node.js 22 is the minimum. After `npm install`, `npm run check` is the gate: ESLint, a Prettier check and the unit tests, in that order. The spoken-command cases in `test/live/` hit the real model through `npm run live`. They read a key from `.env` (`TYPESAFE_API_KEY`, or `AI_GATEWAY_API_KEY` as the fallback) and stay out of CI, partly because TypeSafe rate-limits bursts and partly because every run is billed.
 
-```sh
-npm install
-npm run check      # lint + format check + unit tests
-npm run eval       # live evaluation against Jev (needs TYPESAFE_API_KEY or AI_GATEWAY_API_KEY in .env)
-npm run package    # builds dist/jev-voice-<version>.zip for the Chrome Web Store
-```
+`npm run package` writes the store zip from `src/`. It stops with an error when `package.json` and the manifest carry different versions.
 
-| Script            | Purpose                                                     |
-| ----------------- | ----------------------------------------------------------- |
-| `npm test`        | Unit tests with `node:test`; Jev and Chrome are faked       |
-| `npm run lint`    | ESLint                                                      |
-| `npm run format`  | Prettier                                                    |
-| `npm run eval`    | Real Jev calls on 23 spoken commands; waits out rate limits |
-| `npm run icons`   | Renders `assets/icon.svg` to PNGs with headless Chrome      |
-| `npm run package` | Zips `src/` for upload and checks the version numbers match |
-
-### Project structure
+The unit tests fake both Chrome and Jev: the command rules, the whole handler against a fake browser, the injected page functions in jsdom, and the side panel and options page as real HTML in jsdom. Files listed in [SHARED.md](SHARED.md) are copies from a shared repo and are checked for drift in CI.
 
 ```
 src/
 ├── manifest.json
-├── background.js          Service worker: Chrome adapter and message routing
-├── sidepanel/             Side panel UI (HTML, CSS, controller)
-├── options/               Pick a provider; connect, test, replace or remove the key
-├── permission/            One-time microphone permission page
-├── ui/tokens.css          Shared design tokens (light and dark) and controls
-├── fonts/                 Bundled Inter (OFL), so no page loads fonts from the network
+├── _locales/              Store title and summary
+├── background.js          The service worker: owns the tab, runs handler.js, answers the panel
+├── sidepanel/             The panel itself: mic, transcript line, typed command, activity list
+├── options/               Key setup; reveal.js is the Show/Hide button, the rest is shared
+├── permission/            The tab that asks for the microphone, because a side panel cannot
+├── ui/tokens.css          Colours, type and the button and status styles every page uses
+├── fonts/                 Inter, bundled under the OFL so no page fetches a font
 └── lib/
-    ├── commands.js        Vocabulary, Jev questions, rules for acting early, text candidates
-    ├── handler.js         One transcript end to end: snapshot, ask Jev, act
-    ├── connection.js      "Connected via …" row; opens settings
-    ├── jev.js             Jev client for TypeSafe or Vercel: retries, rate-limit pauses, clear errors
-    ├── page.js            Functions injected into the tab (snapshot, click, type, cursor)
-    ├── queue.js           One request in flight; newest partial wins
-    └── speech.js          Word-by-word speech recognition, on-device first
-test/                      Unit tests (a fake browser for the handler, jsdom for page functions)
-evals/                     Live evaluation against Jev
+    ├── commands.js        What can be said: sites, actions, the questions for Jev, local commands
+    ├── handler.js         Turns one transcript into one action, through the browser adapter
+    ├── connection.js      The "Connected via" line and its button (shared)
+    ├── jev.js             HTTP client for TypeSafe and Vercel (shared)
+    ├── page.js            Everything injected into a web page: listing, marker, click, type
+    ├── queue.js           Keeps one request in flight and drops stale partials
+    └── speech.js          Wraps SpeechRecognition; on-device when Chrome has it
+test/                      node:test suites with jsdom; test/live/ talks to the real model
 ```
 
-### Tests
+## When something goes wrong
 
-- **Unit tests** cover the command rules, the whole handler against a fake browser (every action, corrections, pages that can't be scripted, acting once per utterance), and the injected page functions in jsdom.
-- **The live evaluation** runs 23 commands, including partial phrases that must wait, through the real handler and the real model. It isn't part of CI because it needs a key and TypeSafe rate-limits bursts.
-
-## Troubleshooting
-
-| Problem                                           | Fix                                                                                                                             |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| "Couldn't find that on the page"                  | Only elements visible on screen are considered. Scroll so the element is in view, then try again.                               |
-| "Speech recognition can't reach Google's servers" | You're in Brave or behind a VPN that blocks Google speech. Use Chrome, or type commands.                                        |
-| "Jev is busy. Try again in 30s."                  | TypeSafe is overloaded. Wait, then repeat the command.                                                                          |
-| "Your API key was rejected"                       | Select **Change** in Settings and connect a new key. New Vercel accounts need a card on file before AI Gateway serves requests. |
-| Nothing happens on some pages                     | Chrome doesn't let extensions script `chrome://` pages or the Web Store. Navigation commands still work.                        |
+If it says it couldn't find something on the page, scroll so the element is on screen and say it again; only what is visible is considered, up to 100 elements. If it says Chrome doesn't let extensions see this page, you are on a `chrome://` page, the Web Store or a PDF, and only navigation and tab commands work there. "Can't reach api.typesafe.ai" means the request never left your network; check the connection or a VPN. "Your API key was rejected" means the provider refused the key: press Replace in settings and connect a new one. AI Gateway refuses requests from a Vercel account that has no payment card yet. When the panel reports that Google's speech servers are out of reach, the browser is Brave or a network rule is blocking Google speech; the typed-command box still works.
 
 ## Limitations
 
-- Sees only elements in the viewport, up to 100, and not inside cross-origin iframes or closed shadow roots.
-- The cursor is drawn on the page; extensions can't move the system pointer.
+- It sees only elements in the viewport, up to 100, and not inside cross-origin iframes or closed shadow roots.
+- The marker is drawn on the page; extensions can't move the system pointer.
 - Clicking is synthetic, so a few sites that require trusted user input will ignore it.
 - Element labels come from the page, so a page could name a link misleadingly to draw a click. Each label Jev sees carries the element's kind and position, which the page can't fake, and the activity list says exactly what was clicked, but the label text itself is the page's word.
+
+## Related repos
+
+The same Jev client also runs Slop Radar, Recipe Mode and Intent Guard. Each has its own repo under [github.com/dgr8akki](https://github.com/dgr8akki).
 
 ## License
 

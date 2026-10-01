@@ -124,7 +124,7 @@ describe('options page', () => {
     assert.equal(page.document.activeElement, page.$('replace'), 'Cancel returns focus to Replace');
   });
 
-  it('saves the key on a 429 but says the provider was busy, not that the key works', async () => {
+  it('429', async () => {
     const page = await load({ replies: [json(429, {}, { 'retry-after': '30' })] });
     await connect(page, 'vck_abcdefghijklmnop1234');
     assert.equal(page.chrome.store.apiKey, 'vck_abcdefghijklmnop1234', 'a rate limit means the key was accepted');

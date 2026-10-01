@@ -64,7 +64,7 @@ describe('background service worker', () => {
       const reply = await new Promise((resolve) => {
         onMessage({ type: 'transcript', text: 'click the thing', final: true, id: 't1' }, {}, resolve);
       });
-      assert.deepEqual(reply, { error: 'Something went wrong. Try again.' });
+      assert.deepEqual(reply, { error: "Couldn't run that. Try once more." });
       assert.equal(logged.length, 1);
       assert.ok(
         logged[0].some((arg) => arg instanceof TypeError),

@@ -1,11 +1,4 @@
-/**
- * Runs one transcript end to end: snapshot the page, ask Jev, act.
- *
- * All browser access goes through the `browser` adapter (see background.js), so
- * the whole flow is unit-testable with a fake browser.
- *
- * @module lib/handler
- */
+// One transcript end to end: snapshot the page, ask Jev, act. Browser access only through the adapter.
 
 import {
   buildQuestions,
@@ -34,16 +27,7 @@ import { clearLastTyped, clearMarkers, clickElement, moveCursor, scrollPage, sna
  * @property {(tab: { index: number, windowId: number }, offset: 1 | -1) => Promise<void>} switchTab
  */
 
-/**
- * @typedef {object} Outcome
- * @property {string} [did] What happened, in plain words. Absent when nothing happened yet.
- * @property {number} [ms] Time from transcript to action.
- * @property {boolean} [early] Acted on a partial transcript.
- * @property {boolean} [miss] Understood, but nothing on the page to act on, or a question back.
- * @property {boolean} [needsKey] The command needs Jev and no key is connected yet.
- */
-
-/** Outcomes that didn't act; the side panel shows them as a miss, not a success. */
+// Outcomes that didn't act; the side panel shows them as a miss, not a success.
 const MISS = {
   noTarget: "Couldn't find that on the page",
   noText: "Didn't catch what to type",
@@ -54,10 +38,10 @@ const MISS = {
 };
 const MISSES = new Set(Object.values(MISS));
 
-/** Actions that address a page element through the snapshot's index markers. */
+// Actions that address a page element through the snapshot's index markers.
 const PAGE_ACTIONS = new Set(['click', 'type', 'retarget']);
 
-/** chrome://, the Web Store and PDF viewers refuse executeScript; say so rather than "Couldn't find that". */
+// chrome://, the Web Store and PDF viewers refuse executeScript; say so rather than "Couldn't find that".
 const RESTRICTED = new JevError("Chrome doesn't let extensions see this page. Navigation and tab commands still work.");
 
 /**
@@ -67,10 +51,10 @@ const RESTRICTED = new JevError("Chrome doesn't let extensions see this page. Na
  * @param {() => number} [deps.now]
  * @param {() => boolean | Promise<boolean>} [deps.hasKey] Whether Jev can be called at all.
  */
-/** How many utterance ids to remember. A phrase's partials arrive within seconds; fifty is hours of talking. */
+// How many utterance ids to remember. A phrase's partials arrive within seconds; fifty is hours of talking.
 const ACTED_LIMIT = 50;
 
-/** Snapshots kept for in-progress utterances. Partials reuse theirs; a final looks again. */
+// Snapshots kept for in-progress utterances. Partials reuse theirs; a final looks again.
 const SNAPSHOT_LIMIT = 3;
 
 export function createHandler({ jev, browser, now = () => performance.now(), hasKey = () => true }) {
@@ -86,7 +70,6 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
     if (acted.size > ACTED_LIMIT) acted.delete(acted.values().next().value);
   };
 
-  /** @type {Map<string, { elements: string[], restricted: boolean }>} */
   const snapshots = new Map();
   async function lookAtPage(tabId, id, final) {
     if (!final && snapshots.has(id)) return snapshots.get(id);
@@ -103,7 +86,7 @@ export function createHandler({ jev, browser, now = () => performance.now(), has
 
   /**
    * @param {{ text: string, final: boolean, id: string }} transcript
-   * @returns {Promise<Outcome>}
+   * @returns {Promise<{ did?: string, ms?: number, early?: boolean, miss?: boolean, needsKey?: boolean }>}
    */
   return async function handle({ text, final, id }) {
     if (acted.has(id)) return {};

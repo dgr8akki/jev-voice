@@ -1,18 +1,9 @@
-/**
- * Continuous speech recognition for an extension page, emitting a transcript
- * for every new word so the caller can act before the speaker finishes.
- *
- * Prefers Chrome's on-device recognizer (Chrome 139+), which needs no network,
- * and falls back to cloud recognition. Brave ships the API surface without a
- * working backend in either mode, so it is reported as unsupported.
- *
- * @module lib/speech
- */
+// Continuous speech recognition, one transcript per new word. On-device first (Chrome 139+), cloud otherwise; Brave has the API without a backend and is reported as unsupported.
 
-/** Errors that only mean "nobody talked" and must not stop listening. */
+// Errors that only mean "nobody talked" and must not stop listening.
 const BENIGN_ERRORS = new Set(['no-speech', 'aborted']);
 
-/** @type {Record<string, string>} */
+// @type {Record<string, string>}
 const ERROR_MESSAGES = {
   'not-allowed': 'Microphone access is blocked.',
   'audio-capture': 'No microphone was found.',
@@ -22,7 +13,7 @@ const ERROR_MESSAGES = {
   'restart-failed': 'Listening stopped and could not be resumed. Press Start listening again.',
 };
 
-/** Timings; overridable for tests. */
+// Timings; overridable for tests.
 const DEFAULTS = {
   /** `recognition.start()` throws InvalidStateError while the last session is still tearing down. */
   restartDelayMs: 250,
@@ -33,15 +24,8 @@ const DEFAULTS = {
 };
 
 /**
- * @typedef {object} Transcript
- * @property {string} text
- * @property {boolean} final True once the recognizer has settled the phrase.
- * @property {string} id Stable for every partial of the same phrase.
- */
-
-/**
  * @param {object} callbacks
- * @param {(t: Transcript) => void} callbacks.onTranscript
+ * @param {(t: { text: string, final: boolean, id: string }) => void} callbacks.onTranscript
  * @param {(error: { code: string, message: string }) => void} callbacks.onError
  * @param {(status: { listening: boolean, mode?: 'on-device' | 'cloud' }) => void} [callbacks.onStatus]
  * @param {(message: string) => void} [callbacks.onNotice] One-off progress messages.

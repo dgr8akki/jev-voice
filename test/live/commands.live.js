@@ -1,14 +1,17 @@
-// Live evaluation against the real Jev model: runs spoken commands through the
-// real handler with a recording browser, on a fixed search-results page.
-// Needs AI_GATEWAY_API_KEY (see .env.example); not run in CI.
+// The spoken cases, run against the real model. Each one goes through the real
+// handler with a browser double that records what would have happened, on a
+// fixed Google results page for "alan turing" plus a small sign-up form.
 //
-//   npm run eval
+//   npm run live        (needs TYPESAFE_API_KEY or AI_GATEWAY_API_KEY in .env)
 //
-// TypeSafe rate-limits bursts and has brief outages, so each case waits and retries.
-import { createHandler } from '../src/lib/handler.js';
-import { createJevClient } from '../src/lib/jev.js';
+// Not part of `npm test`: it costs money and TypeSafe rate-limits bursts, so a
+// 429 or a 5xx here is a pause, not a failure. Most of the phrases are ones I
+// said while building this; the misspelt "babuja" is a real recogniser output.
+import { createHandler } from '../../src/lib/handler.js';
+import { createJevClient } from '../../src/lib/jev.js';
 
-const MAX_ATTEMPTS = 6;
+/** How long to wait between attempts when the provider is busy, in seconds; the last entry is the give-up point. */
+const BACKOFF_S = [5, 10, 20, 40, 60];
 
 const ELEMENTS = [
   'field: Search',
@@ -55,6 +58,12 @@ const cases = [
   ['go back', true, ({ outcome }) => outcome.did === 'Went back'],
   ['close this tab', true, ({ outcome }) => outcome.did === 'Closed the tab'],
   ['um yeah so anyway', true, ({ outcome }) => outcome.did === 'Ignored'],
+  // Said at my desk; the first two never reach Jev.
+  ['go to rte dot ie', true, ({ outcome }) => outcome.did === 'Opened rte.ie'],
+  ['open hacker news', true, ({ outcome }) => outcome.did === 'Opened news.ycombinator.com'],
+  ['open the imdb one', true, ({ outcome }) => outcome.did === 'Clicked link: The Imitation Game (2014) - IMDb'],
+  ['click images', true, ({ outcome }) => outcome.did === 'Clicked button: Images'],
+  ['open britannica', true, ({ outcome }) => outcome.did?.startsWith('Clicked link: Alan Turing | Britannica')],
 ];
 
 // TYPESAFE_API_KEY calls TypeSafe directly; otherwise AI_GATEWAY_API_KEY goes through Vercel.
@@ -86,6 +95,7 @@ function recordingBrowser(calls) {
       calls.push([func.name, ...args]);
       if (func.name === 'snapshot') return ELEMENTS;
       if (func.name === 'clearLastTyped') return 'Akash';
+      if (func.name === 'clickElement') return { clicked: true };
       return null;
     },
     navigate: record('navigate'),
@@ -98,16 +108,16 @@ function recordingBrowser(calls) {
   };
 }
 
-async function withRetry(fn) {
-  for (let attempt = 1; ; attempt += 1) {
+/** Runs `fn`, sitting out rate limits and 5xx along BACKOFF_S (or the provider's own Retry-After). Anything else is the case's problem. */
+async function patiently(fn) {
+  for (const [attempt, fallback] of BACKOFF_S.entries()) {
     try {
       return await fn();
     } catch (error) {
-      // Rate limits and TypeSafe outages are infrastructure, not wrong answers: wait and retry.
-      const outage = error.status >= 500;
-      if (!(error.busy || outage) || attempt === MAX_ATTEMPTS) throw error;
-      const wait = error.retryAfter || 5 * attempt;
-      process.stdout.write(`  (${outage ? 'service unavailable' : 'rate-limited'}, waiting ${wait}s)\n`);
+      const transient = error.busy || error.status >= 500;
+      if (!transient || attempt === BACKOFF_S.length - 1) throw error;
+      const wait = error.retryAfter || fallback;
+      process.stdout.write(`  (${error.busy ? 'rate-limited' : 'provider error'}, back in ${wait}s)\n`);
       await new Promise((resolve) => setTimeout(resolve, (wait + 1) * 1000));
     }
   }
@@ -120,7 +130,7 @@ for (const [index, [said, final, expect]] of cases.entries()) {
   // A fresh handler per case, so each utterance is independent.
   const handle = createHandler({ jev, browser: recordingBrowser(calls) });
   try {
-    const outcome = await withRetry(() => handle({ text: said, final, id: `case-${index}` }));
+    const outcome = await patiently(() => handle({ text: said, final, id: `case-${index}` }));
     const ok = expect({ outcome, calls });
     failures += ok ? 0 : 1;
     console.log(

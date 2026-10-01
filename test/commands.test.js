@@ -196,7 +196,7 @@ describe('spokenDomain', () => {
     assert.equal(spokenDomain('open news dot ycombinator dot com'), 'news.ycombinator.com');
   });
 
-  it('ignores ordinary sentences', () => {
+  it('plain sentences', () => {
     assert.equal(spokenDomain('go to wikipedia'), null);
     assert.equal(spokenDomain('scroll down a bit'), null);
   });
@@ -256,7 +256,7 @@ describe('textCandidates', () => {
 });
 
 describe('textQuestion', () => {
-  it('quotes each candidate', () => {
+  it('quoted', () => {
     assert.deepEqual(textQuestion(['hello', 'hi']).text.criteria, { t0: '"hello"', t1: '"hi"' });
   });
 });

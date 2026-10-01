@@ -1,12 +1,4 @@
-/**
- * Serialises transcript handling so only one Jev request is in flight at a time.
- *
- * Speech recognition emits a partial transcript for every new word. While a
- * request is running, newer partials replace older queued ones (only the
- * latest wording matters); final transcripts are never dropped.
- *
- * @module lib/queue
- */
+// One Jev request in flight at a time: newer partials replace queued ones, finals are never dropped.
 
 /**
  * @template T
@@ -14,7 +6,6 @@
  * @returns {{ push: (item: T & { final: boolean }) => Promise<void> }}
  */
 export function createTranscriptQueue(handler) {
-  /** @type {Array<T & { final: boolean }>} */
   const pending = [];
   let running = null;
 

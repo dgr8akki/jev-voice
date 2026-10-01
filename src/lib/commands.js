@@ -1,14 +1,6 @@
-/**
- * The command vocabulary and the rules that turn Jev's answers into browser
- * actions. Pure functions only: no Chrome APIs, so everything here is unit-tested.
- *
- * Jev never generates URLs, selectors or text. Code lists the candidates (actions,
- * on-page elements, known sites, spans of the transcript) and Jev picks one.
- *
- * @module lib/commands
- */
+// Vocabulary, Jev questions and the rules that turn answers into actions. Pure: no Chrome APIs.
 
-/** Sites reachable by name without a search. */
+// Sites reachable by name without a search.
 export const SITES = {
   google: 'https://www.google.com',
   youtube: 'https://www.youtube.com',
@@ -24,7 +16,7 @@ export const SITES = {
   vercel: 'https://vercel.com',
 };
 
-/** Every action the extension can take, described for Jev. */
+// Every action the extension can take, described for Jev.
 export const ACTIONS = {
   navigate: 'Go to a website by name that is not one of the links on the current page',
   search: 'Search the web for something',
@@ -44,28 +36,21 @@ export const ACTIONS = {
   none: 'Not a browser command (chatter, filler, unclear)',
 };
 
-/** Actions whose argument keeps growing while the user talks: never act on a partial. */
+// Actions whose argument keeps growing while the user talks: never act on a partial.
 const WAIT_FOR_FINAL = new Set(['search', 'type', 'retarget', 'none']);
 
-/** A partial that ends on one of these verbs has its text still to come; there is nothing to ask about yet. */
+// A partial that ends on one of these verbs has its text still to come; there is nothing to ask about yet.
 const FREE_TEXT_VERB = /\b(?:search(?:\s+for)?|look\s+up|google|type|write|enter|put|insert)\s*$/i;
 
 /** Hand-tuned against the eval suite; lower acts sooner but misfires more. */
 export const THRESHOLDS = { act: 0.5, early: 0.8, earlyTarget: 0.8, complete: 0.7 };
 
-/** Commands longer than this are dictation: type everything after the verb. */
+// Commands longer than this are dictation: type everything after the verb.
 const MAX_SPAN_WORDS = 16;
 
 const SUBMIT_SUFFIX = /\s*\band (?:press |hit )?(?:enter|submit|search)\s*$/i;
 
-/**
- * @typedef {object} Command
- * @property {keyof typeof ACTIONS} action
- * @property {number | null} target Index into the page's element list.
- * @property {string | null} site Key of `SITES`, if Jev recognised one.
- */
-
-/** How much of a page's own text goes into a candidate label. */
+// How much of a page's own text goes into a candidate label.
 const LABEL_LIMIT = 60;
 
 const ordinal = (n) => {
@@ -148,7 +133,7 @@ export function buildQuestions({ elements, final, text = '' }) {
  *
  * @param {Record<string, any>} answers
  * @param {{ final: boolean }} context
- * @returns {Command | null}
+ * @returns {{ action: string, target: number | null, site: string | null } | null}
  */
 export function toCommand(answers, { final }) {
   // A partial reply or a schema change must read as "no command", not as a TypeError.
@@ -173,7 +158,7 @@ export function toCommand(answers, { final }) {
   return { action, target, site };
 }
 
-/** Spoken forms of the commands that need neither the page nor Jev. Anchored, so "go back to the list" falls through. */
+// Spoken forms of the commands that need neither the page nor Jev. Anchored, so "go back to the list" falls through.
 const LOCAL = [
   [/^scroll\s+down\b/, 'scroll_down'],
   [/^scroll\s+up\b/, 'scroll_up'],
@@ -194,7 +179,7 @@ const GO = /^(?:go\s+to|open|visit|navigate\s+to)\s+(.+)$/;
  *
  * @param {string} text
  * @param {{ final?: boolean }} [context]
- * @returns {Command | null}
+ * @returns {{ action: string, target: number | null, site: string | null } | null}
  */
 export function localCommand(text, { final = true } = {}) {
   const said = text
@@ -213,11 +198,8 @@ export function localCommand(text, { final = true } = {}) {
   return { action: 'navigate', target: null, site };
 }
 
-/**
- * Endings a spoken "something.x" may have before it counts as a web address.
- * Recognizers write "readme.md" and "node.js" with a dot too, and those are
- * not sites. Saying "dot" out loud is taken at its word whatever follows.
- */
+// Recognizers write "readme.md" and "node.js" with a dot too; only these endings count as a site
+// unless "dot" was said out loud.
 const TLDS = new Set(
   'com net org io co uk ie de fr es it nl eu us ca au nz in jp ch se no dk fi pl be at edu gov info biz dev app ai me tv fm gg to xyz site online tech store shop blog news'.split(
     ' ',

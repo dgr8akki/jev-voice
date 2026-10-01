@@ -3,22 +3,20 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>Jev Voice settings</title>
     <link rel="stylesheet" href="../ui/tokens.css" />
     <link rel="stylesheet" href="options.css" />
     <script type="module" src="options.js"></script>
     <script type="module" src="reveal.js"></script>
   </head>
-  <body
-    data-app="Jev Voice"
-    data-next="Open the Jev Voice side panel: clicking, typing and searching now work too, alongside the scroll, tab and open-site commands that never needed a key."
-  >
+  <body data-app="Jev Voice" data-next="Open the side panel and try 'scroll down'.">
     <main>
       <header class="brand">
         <span class="mark">
           <svg width="26" height="26" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
-            <circle cx="9" cy="12" r="3.2" fill="currentColor" stroke="none" />
-            <path d="M16.5 6v12" />
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
           </svg>
         </span>
         <div>
@@ -48,9 +46,10 @@
 
       <form id="key-form" class="card" aria-labelledby="connect-title" hidden>
         <div class="intro">
-          <h2 id="connect-title">Connect Jev</h2>
+          <h2 id="connect-title">Add your Jev key</h2>
           <p class="muted">
-            Jev Voice calls Jev with your own API key, so you pay your provider directly. A command costs about $0.0001.
+            Jev Voice runs on your own Jev key, so you pay your provider and nobody else. A command costs about a
+            hundredth of a cent; a $1 spend limit lasts months.
           </p>
         </div>
         <fieldset class="providers">
@@ -61,7 +60,7 @@
               <span class="dot" aria-hidden="true"></span>
               <span>
                 <strong>Vercel AI Gateway</strong>
-                <small>Billed to your Vercel account, with spend limits.</small>
+                <small>Billed through Vercel, which passes requests to TypeSafe.</small>
               </span>
             </label>
             <label class="tile">
@@ -69,7 +68,7 @@
               <span class="dot" aria-hidden="true"></span>
               <span>
                 <strong>TypeSafe</strong>
-                <small>Jev direct from its makers, billed by TypeSafe.</small>
+                <small>Billed by TypeSafe, which runs Jev.</small>
               </span>
             </label>
           </div>
@@ -102,7 +101,7 @@
       </form>
 
       <footer class="muted">
-        Your key is stored only in this browser and sent only to <code id="host"></code>. See the
+        The key stays in this browser. Requests go to <code id="host"></code> and nowhere else. Details in the
         <a href="https://github.com/dgr8akki/jev-voice/blob/main/PRIVACY.md" target="_blank" rel="noreferrer"
           >privacy policy</a
         >.

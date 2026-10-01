@@ -53,7 +53,7 @@ describe('snapshot', () => {
     assert.equal(document.getElementById('last').getAttribute('data-jev-voice'), '0');
   });
 
-  it('caps the list at 100 elements', () => {
+  it('100 cap', () => {
     load(`<div>${'<button>Go</button>'.repeat(150)}</div>`);
     assert.equal(snapshot().length, 100);
   });
@@ -144,7 +144,7 @@ describe('clickElement', () => {
     assert.equal(clickElement(99), null, 'no marker, nothing clicked');
   });
 
-  it('returns the URL of links that open a new tab instead of clicking', () => {
+  it('target=_blank', () => {
     load(FORM);
     snapshot();
     assert.deepEqual(clickElement(4), { newTab: 'https://example.org/' });
@@ -215,6 +215,16 @@ describe('moveCursor', () => {
     assert.match(box[0].style.cssText.replace(/\s/g, ''), /rgba\(22,24,38/, 'keeps the dark halo');
     assert.equal(document.getElementById('last').style.outline, '3px dotted red', 'page styles are left alone');
     assert.equal(document.getElementById('first').style.outline, '');
+  });
+
+  it('draws the marker in the brand colour over a dark keyline, and nothing else', async () => {
+    const document = load(FORM);
+    snapshot();
+    await moveCursor(0);
+    const svg = document.getElementById('jev-voice-cursor').innerHTML;
+    const colours = [...new Set(svg.match(/#[0-9a-f]{6}/gi).map((c) => c.toLowerCase()))].sort();
+    assert.deepEqual(colours, ['#161826', '#796cbf']);
+    assert.match(document.getElementById('jev-voice-cursor').style.cssText, /pointer-events: none/);
   });
 
   it('shows a caret for typing and a dot for clicking', async () => {

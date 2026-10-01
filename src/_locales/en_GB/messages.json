@@ -1,0 +1,14 @@
+{
+  "appName": {
+    "message": "Jev Voice: browse by voice",
+    "description": "Extension name, also the store title (45 characters at most)."
+  },
+  "appShortName": {
+    "message": "Jev Voice",
+    "description": "Short name shown where the full name does not fit."
+  },
+  "appDesc": {
+    "message": "Control your browser by voice: open sites, search, click links and fill in forms by saying what you want.",
+    "description": "Store summary (132 characters at most). Same wording as en; kept so a British listing can diverge later."
+  }
+}

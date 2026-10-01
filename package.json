@@ -1,8 +1,8 @@
 {
   "name": "jev-voice",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
-  "description": "Chrome extension to control the browser by voice, powered by Jev.",
+  "description": "Voice control for Chrome: open sites, search, click links and fill in forms hands-free. MV3 extension, on-device speech recognition, bring your own TypeSafe or Vercel key.",
   "type": "module",
   "license": "MIT",
   "author": "Aakash Pahuja",
@@ -21,7 +21,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run format:check && npm test",
-    "eval": "node --env-file-if-exists=.env evals/commands.eval.js",
+    "live": "node --env-file-if-exists=.env test/live/commands.live.js",
     "icons": "node scripts/render-icons.js",
     "package": "node scripts/package.js"
   },

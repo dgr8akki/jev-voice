@@ -201,6 +201,12 @@ h2 {
   counter-increment: step;
 }
 
+/* A flex item will not shrink below its content unless told to; without this the step text ran off a 320 px page at 200 % zoom. */
+.steps li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .steps li::before {
   content: counter(step);
   display: grid;

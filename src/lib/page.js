@@ -1,14 +1,4 @@
-/**
- * Functions injected into the active tab with `chrome.scripting.executeScript`.
- *
- * Chrome serialises each function on its own, so every function here must be
- * self-contained: no imports, no references to module scope.
- *
- * Elements are addressed by the index `snapshot()` assigned, stored in a
- * `data-jev-voice` attribute until the next snapshot.
- *
- * @module lib/page
- */
+// Functions injected with chrome.scripting.executeScript. Each is serialised on its own: no imports, nothing from module scope.
 
 /**
  * Lists the interactive elements visible in the viewport, top to bottom, as
@@ -24,6 +14,7 @@ export function snapshot() {
   const LIMIT = 100;
   for (const el of document.querySelectorAll(`[${ATTR}]`)) el.removeAttribute(ATTR);
 
+  // TODO: shadow DOM. querySelectorAll stops at shadow roots, so controls inside web components are not listed.
   const selector =
     'a[href], button, input:not([type=hidden]):not([type=password]), textarea, select, summary, ' +
     '[role=button], [role=link], [role=tab], [role=menuitem], [role=checkbox], [role=switch], [role=combobox], [contenteditable=true]';
@@ -91,16 +82,17 @@ export async function moveCursor(index, kind = 'click') {
     cursor = document.createElement('div');
     cursor.id = 'jev-voice-cursor';
     cursor.setAttribute('aria-hidden', 'true');
+    // Two colours only: the brand accent, keylined with a dark halo so it reads on light, dark and busy pages.
     const halo = 'stroke="#161826" stroke-opacity=".8" stroke-width="5"';
-    const line = 'stroke="#e7e5fe" stroke-width="2"';
+    const line = 'stroke="#796cbf" stroke-width="2.5"';
     cursor.innerHTML =
       '<svg width="36" height="36" viewBox="0 0 36 36" style="overflow:visible;display:block">' +
       '<g fill="none" stroke-linecap="round">' +
-      '<circle class="pulse" cx="18" cy="18" r="11" stroke="#b5abfc" stroke-width="1.5" opacity="0"/>' +
+      '<circle class="pulse" cx="18" cy="18" r="11" stroke="#796cbf" stroke-width="1.5" opacity="0"/>' +
       `<g class="ring"><circle cx="18" cy="18" r="11" ${halo}/><circle cx="18" cy="18" r="11" ${line}/></g>` +
-      `<path d="M26 10l5-5" ${halo}/><path d="M26 10l5-5" ${line}/></g>` +
-      '<circle class="dot" cx="18" cy="18" r="4" fill="#9184d9" stroke="#161826" stroke-width="1.5"/>' +
-      '<rect class="caret" x="16.5" y="11" width="3" height="14" rx="1.5" fill="#9184d9" stroke="#161826" stroke-width="1.25"/>' +
+      '</g>' +
+      '<circle class="dot" cx="18" cy="18" r="4" fill="#796cbf" stroke="#161826" stroke-width="1.5"/>' +
+      '<rect class="caret" x="16.5" y="11" width="3" height="14" rx="1.5" fill="#796cbf" stroke="#161826" stroke-width="1.25"/>' +
       '</svg>';
     cursor.style.cssText =
       'position:fixed;left:0;top:0;width:36px;height:36px;margin:-18px 0 0 -18px;z-index:2147483647;' +
@@ -140,7 +132,7 @@ export async function moveCursor(index, kind = 'click') {
   }
   box.style.cssText =
     `position:fixed;left:${r.left - 4}px;top:${r.top - 4}px;width:${r.width + 8}px;height:${r.height + 8}px;` +
-    'border:2px solid #b5abfc;border-radius:6px;box-shadow:0 0 0 6px rgba(22,24,38,.72);' +
+    'border:2px solid #796cbf;border-radius:6px;box-shadow:0 0 0 6px rgba(22,24,38,.72);' +
     'pointer-events:none;z-index:2147483646';
   if (kind === 'click' && !reduceMotion) {
     cursor

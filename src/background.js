@@ -16,7 +16,6 @@ try {
   // touch storage, so nothing untrusted reads the key without the lock either.
 }
 
-// First install: open settings in a tab to pick a provider and connect a key.
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install') chrome.runtime.openOptionsPage();
 });
@@ -24,11 +23,10 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
 const jev = createJevClient({
   getKey: async () => (await chrome.storage.local.get('apiKey')).apiKey ?? '',
   getProvider: async () => (await chrome.storage.local.get('provider')).provider,
-  // A 429 pause kept only in memory is forgotten when Chrome stops the idle worker; session storage is not.
+  // A 429 pause held in memory dies with the worker when Chrome shuts it down for idling; chrome.storage.session outlives it.
   pauseStore: sessionPauseStore(chrome.storage.session),
 });
 
-/** @type {import('./lib/handler.js').Browser} */
 const browser = {
   async activeTab() {
     const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
@@ -65,8 +63,8 @@ chrome.runtime.onMessage.addListener((message, _sender, reply) => {
     // Anything that is not a JevError is a bug or an API change; the generic line hides it, so log it.
     if (!(error instanceof JevError)) console.error('Jev Voice: command failed', error);
     // Partials are speculative: only a final transcript is worth an error line.
-    const text = error instanceof JevError ? error.message : 'Something went wrong. Try again.';
+    const text = error instanceof JevError ? error.message : "Couldn't run that. Try once more.";
     reply(message.final ? { error: text } : {});
   });
-  return true; // reply asynchronously
+  return true;
 });

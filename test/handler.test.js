@@ -355,7 +355,7 @@ describe('createHandler', () => {
     });
   });
 
-  it('reports chatter as ignored', async () => {
+  it('chatter', async () => {
     const { outcome } = await run({ said: 'um yeah so anyway', jev: jevAnswering({ action: 'none' }) });
     assert.equal(outcome.did, 'Ignored');
   });

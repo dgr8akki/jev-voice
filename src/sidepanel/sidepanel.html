@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
     <title>Jev Voice</title>
     <link rel="stylesheet" href="../ui/tokens.css" />
     <link rel="stylesheet" href="sidepanel.css" />
@@ -97,25 +98,21 @@
         </summary>
         <dl>
           <dt>Go</dt>
-          <dd>“go to wikipedia”<br />“open facebook dot com”</dd>
-          <dt>Search</dt>
-          <dd>“search for Alan Turing”</dd>
-          <dt>Click</dt>
-          <dd>“click the first result”<br />“open the pricing link”</dd>
-          <dt>Type</dt>
-          <dd>“type hello in the email field and press enter”</dd>
-          <dt>Fix</dt>
-          <dd>“no, that’s the first name, not the surname”</dd>
+          <dd>"open wikipedia" · "go to rte dot ie" · "search for train times to Cork"</dd>
           <dt>Page</dt>
-          <dd>“scroll down” · “go back” · “reload”</dd>
+          <dd>"click the first result" · "scroll down" · "go back"</dd>
+          <dt>Type</dt>
+          <dd>"surname Pahuja" · "type hello in the email field and press enter"</dd>
+          <dt>Fix</dt>
+          <dd>"no, that's the first name"</dd>
           <dt>Tabs</dt>
-          <dd>“new tab” · “next tab” · “close this tab”</dd>
+          <dd>"new tab" · "close this tab"</dd>
         </dl>
       </details>
 
       <section class="activity" aria-labelledby="activity-heading">
-        <h2 id="activity-heading" class="kicker">Activity</h2>
-        <p id="activity-empty" class="empty">Commands you give will appear here.</p>
+        <h2 id="activity-heading" class="kicker">Recent commands</h2>
+        <p id="activity-empty" class="empty">Nothing yet. Try "scroll down" or "open wikipedia".</p>
         <ol id="activity" class="activity-list" aria-live="polite" aria-busy="false"></ol>
       </section>
     </main>

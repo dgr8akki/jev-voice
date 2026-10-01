@@ -9,21 +9,15 @@ import { createListener } from '../lib/speech.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVITY = 30;
-/** Recognizers emit a partial per word; waiting this long after the last one saves a request per word. */
+// Recognizers emit a partial per word; waiting this long after the last one saves a request per word.
 const PARTIAL_PAUSE_MS = 250;
 
-// ---------------------------------------------------------------------------
 // Live line: what the recognizer heard, word by word
 
-/** The transcript on screen, and how many of its words an early action fired on. */
 let heard = null;
 let fired = { id: null, words: 0 };
 
-/**
- * The visible line is not a live region: it changes on every word, which a
- * screen reader would read as the whole sentence again each time. The final
- * phrase is announced once, from a hidden status line.
- */
+// Not a live region: it changes on every word. The final phrase is announced once from #heard-final.
 function renderHeard() {
   $('heard').replaceChildren();
   if (!heard) return;
@@ -41,20 +35,18 @@ function renderHeard() {
   if (heard.final) $('heard-final').textContent = `Heard: ${heard.text}`;
 }
 
-/** @param {string} text @param {'mode' | 'problem'} [kind] */
 function setNotice(text, kind = 'mode') {
   $('notice').textContent = text;
   $('notice').className = `notice ${kind}`;
 }
 
-// ---------------------------------------------------------------------------
 // Commands
 
 const queue = createTranscriptQueue(async (transcript) => {
   // A final is a request the user is waiting on: show it working, then fill the same card in.
   // Partials stay silent until one of them acts.
   const pending = transcript.final
-    ? logActivity(transcript.text, `Working on “${transcript.text}”…`, { kind: 'pending' })
+    ? logActivity(transcript.text, `Working on "${transcript.text}"...`, { kind: 'pending' })
     : null;
   $('activity').setAttribute('aria-busy', String(Boolean(pending)));
   // A partial that finds the worker asleep is not worth an error line; the worker itself stays quiet on partials too.
@@ -88,19 +80,12 @@ $('command-form').addEventListener('submit', (event) => {
   $('command').value = '';
 });
 
-/**
- * Prepends an entry, or fills in a pending one; CSS turns the newest one into the last-action card.
- *
- * @param {string | null} said What the user said, or null for system messages.
- * @param {string} text Outcome in plain past tense, an error, or what is being worked on.
- * @param {{ kind: 'ok' | 'miss' | 'error' | 'ignored' | 'pending', ms?: number, early?: boolean, into?: HTMLElement | null }} details
- * @returns {HTMLElement} The entry, so a pending one can be filled in later.
- */
+// Prepends an entry, or fills in a pending one; CSS turns the newest into the last-action card.
 function logActivity(said, text, { kind, ms, early, into = null }) {
   const item = into?.isConnected ? into : $('entry').content.firstElementChild.cloneNode(true);
   item.dataset.kind = kind;
   if (early) item.dataset.early = '';
-  item.querySelector('.said').textContent = said ? `“${said}”` : '';
+  item.querySelector('.said').textContent = said ? `"${said}"` : '';
   item.querySelector('.outcome').classList.remove('error', 'result');
   item.querySelector('.outcome').classList.add(kind === 'error' ? 'error' : 'result');
   item.querySelector('.text').textContent = text;
@@ -124,7 +109,6 @@ function logActivity(said, text, { kind, ms, early, into = null }) {
   return item;
 }
 
-// ---------------------------------------------------------------------------
 // Microphone
 
 let micBlocked = false;
@@ -144,9 +128,13 @@ const listener = createListener({
     renderMic();
     if (code === 'not-allowed') {
       chrome.tabs.create({ url: chrome.runtime.getURL('permission/permission.html') });
-      logActivity(null, `${message} Allow it in the tab that just opened, then start listening again.`, {
-        kind: 'error',
-      });
+      logActivity(
+        null,
+        'Chrome needs your OK for the microphone. Allow it in the tab that just opened, then press Start listening.',
+        {
+          kind: 'error',
+        },
+      );
       return;
     }
     logActivity(null, message, { kind: 'error' });
@@ -163,13 +151,8 @@ const listener = createListener({
   },
 });
 
-/**
- * Mic states: idle, listening, off (no speech recognition) and error (blocked).
- * No key still means idle. The button is always operable (off explains itself
- * when pressed), so it is never aria-disabled, and its state lives in the
- * label alone: "Start listening" / "Stop listening", not a pressed toggle
- * whose name changes underneath it.
- */
+// idle, listening, off (no speech recognition) or error (blocked). Never aria-disabled: off explains
+// itself when pressed. State lives in the label alone, not doubled as aria-pressed.
 function renderMic() {
   const listening = listener.listening;
   const state = listening ? 'listening' : !listener.supported ? 'off' : micBlocked ? 'error' : 'idle';
@@ -193,7 +176,6 @@ if (!listener.supported) {
   $('command').focus();
 }
 
-// ---------------------------------------------------------------------------
 // Settings
 
 // Without a key the panel still scrolls, navigates and manages tabs; the banner says what a key adds.
