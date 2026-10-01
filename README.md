@@ -7,7 +7,7 @@ Jev Voice is a voice control extension for Chrome. You open sites, search, click
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
-  <img src="docs/screenshot-light.png" width="360" alt="Jev Voice side panel while listening. The words go back are underlined because the extension went back before the sentence finished; below, recent commands: typing a name into a form field, a click and a search." />
+  <img src="docs/screenshot-light.png" width="420" alt="Jev Voice side panel while listening, with open github as the last thing heard. Below, recent commands with their timings: Opened github.com, a Google search, a click on a Wikipedia contents link, a scroll and typing rye starter into the Wikipedia search field." />
 </picture>
 
 ## What it does
@@ -36,7 +36,7 @@ Brave has the speech API but no backend behind it, so use Chrome. Typed commands
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
-  <img src="docs/options-light.png" width="520" alt="Jev Voice settings with no key yet. Two provider tiles, Vercel AI Gateway and TypeSafe, sit above numbered steps for the selected one, and below them a masked key input next to its Connect button." />
+  <img src="docs/options-light.png" width="520" alt="Jev Voice settings once a key is connected: Connected via Vercel AI Gateway with the masked key, Test, Replace and Remove buttons, and a line saying the key stays in this browser." />
 </picture>
 
 ## Talking to it

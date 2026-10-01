@@ -65,7 +65,7 @@ Category: Accessibility. Language: English (United Kingdom), to match the Britis
 
 ### Screenshots, promo tile, marquee
 
-Not final. The existing set under `screenshots/jev-voice/store/` predates the mic label, the "Opened github.com" outcome and the new icon; it is reshot as its own task (JV-049).
+Five 1280x800 shots (with 640x400 copies), a 440x280 tile and a 1400x560 marquee are under `screenshots/jev-voice/store/` in the reports folder, retaken on 1 October 2026 against this release on a real page (the Wikipedia article on sourdough). They show the mic label, the "Opened github.com" outcome and the new icon. The README beside them has the caption for each.
 
 ### URLs
 
